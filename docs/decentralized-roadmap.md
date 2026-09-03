@@ -14,6 +14,7 @@ complex.
 - Owner-controlled identity reset and worker revocation.
 - Owner-assigned worker trust tiers and application routing policies.
 - Organization worker pools for explicit workload boundaries.
+- Expiring, one-use enrollment grants and worker identity audit events.
 
 ## Shared worker pools
 

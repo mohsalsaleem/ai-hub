@@ -13,6 +13,12 @@ class WorkerIdentityTest < ActiveSupport::TestCase
       public_key = OpenSSL::PKey.read(first.public_key_pem)
       assert public_key.verify(nil, first.enrollment_proof,
         "aihub-worker-enrollment/v1\n#{first.fingerprint}")
+
+      assert_not first.enrolled_with?("token")
+      first.mark_enrolled!("token")
+      assert first.enrolled_with?("token")
+      assert_not first.enrolled_with?("rotated-token")
+      assert_equal 0o600, File.stat(File.join(directory, "identity.enrolled")).mode & 0o777
     end
   end
 end

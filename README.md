@@ -42,7 +42,8 @@ bin/rails server
 Open `http://127.0.0.1:3000/registration/new` to create the first organization
 owner. The console then lets the owner create applications, publish task
 definitions, inspect jobs, and issue worker credentials. Plaintext application
-and worker tokens are shown once; AI Hub stores only their digests.
+tokens and worker enrollment grants are shown once; AI Hub stores only their
+digests.
 
 For scripted bootstrapping instead, run:
 
@@ -74,9 +75,10 @@ an `.env` file is optional.
 
 On first connection, the official worker creates an Ed25519 key in
 `AI_HUB_STATE_PATH` and enrolls its public identity using the worker token.
+New enrollment grants expire after 24 hours and are consumed by enrollment.
 After enrollment, runtime requests are signed and the bearer token is no longer
 accepted for that worker. Rotating the token in the console resets the identity
-and permits a fresh enrollment.
+and issues a fresh grant.
 
 On the current macOS model host, `worker/com.mohsal.ai-hub-worker.plist` runs
 the worker as a login service. Its wrapper reads the token from macOS Keychain;
@@ -196,6 +198,10 @@ possession but does not verify the operator or model.
   separate SHA-256-digested bearer tokens.
 - Enrolled workers authenticate runtime requests with an Ed25519 signature;
   timestamps and stored nonces prevent altered or replayed requests.
+- Worker enrollment grants expire after 24 hours, are accepted once, and are
+  revoked when a worker is reset or revoked.
+- Enrollment, identity reset, revocation, trust, and pool changes are recorded
+  in a per-worker audit trail without storing plaintext credentials.
 - Job input and output requests are capped at 256 KiB.
 - Definitions are capped at 96 KiB per API request.
 - Leases expire and can be reclaimed after worker failure.

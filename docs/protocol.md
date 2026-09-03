@@ -6,8 +6,9 @@ Workers enroll an Ed25519 device identity, then sign runtime requests.
 
 ## Worker identity
 
-New workers begin with an owner-issued bearer token. The official worker creates
-an Ed25519 key in its local state directory and calls
+New workers begin with an owner-issued enrollment grant. New grants expire in
+24 hours and can be accepted once. The official worker creates an Ed25519 key
+in its local state directory and calls
 `POST /api/v1/worker/enroll`. The private key never leaves the worker host.
 
 After enrollment, bearer authentication is disabled for that worker. Each
@@ -15,9 +16,11 @@ runtime request carries the key fingerprint, timestamp, random nonce, and a
 signature binding the HTTP method, path, timestamp, nonce, and request body.
 The Hub rejects stale timestamps, altered requests, and reused nonces.
 
-Workers that have not enrolled remain compatible with bearer authentication so
-existing deployments can upgrade without downtime. Rotating a worker token
-clears its enrolled identity and permits a fresh enrollment. See
+Workers that have not enrolled retain legacy bearer authentication during the
+compatibility period. Existing unenrolled credentials receive a seven-day
+migration grant. Rotating a worker token clears its enrolled identity, revokes
+unused grants, and issues a fresh grant. Enrollment, reset, revocation, trust,
+and pool changes are recorded as identity events. See
 [worker identity](worker-identity.md) and the [threat model](threat-model.md).
 
 ## Trust-aware routing

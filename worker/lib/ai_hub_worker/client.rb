@@ -16,16 +16,15 @@ module AiHubWorker
       @token = config.worker_token
       @worker_id = config.worker_id
       @identity = Identity.new(config.state_path)
-      @enrolled = false
       @http_start = http_start
     end
 
     def enroll
-      return if @enrolled
+      return if @identity.enrolled_with?(@token)
 
       post("/api/v1/worker/enroll", { public_key: @identity.public_key_pem,
         proof: Base64.strict_encode64(@identity.enrollment_proof) }, signed: false)
-      @enrolled = true
+      @identity.mark_enrolled!(@token)
     end
 
     def claim(wait_seconds:)
@@ -48,7 +47,7 @@ module AiHubWorker
 
     def post(path, payload, signed: true) = request(:post, path, payload, signed:)
 
-    def request(method, path, payload = nil, signed: true)
+    def request(method, path, payload = nil, signed: true, retry_enrollment: true)
       uri = @base.dup
       uri.path = path
       request = method == :get ? Net::HTTP::Get.new(uri) : Net::HTTP::Post.new(uri)
@@ -62,7 +61,15 @@ module AiHubWorker
       response = @http_start.call(uri.host, uri.port, use_ssl: uri.scheme == "https",
         open_timeout: 10, read_timeout: 35) { |http| http.request(request) }
       body = response.body.to_s.empty? ? {} : JSON.parse(response.body)
-      return body if response.code.to_i.between?(200, 299)
+      if response.code.to_i.between?(200, 299)
+        @identity.mark_enrolled!(@token) if signed
+        return body
+      end
+
+      if signed && retry_enrollment && response.code.to_i == 401 && !@identity.enrolled_with?(@token)
+        enroll
+        return request(method, path, payload, signed:, retry_enrollment: false)
+      end
 
       error = "Hub returned HTTP #{response.code}: #{body["error"] || "unknown_error"}"
       error_class = response.code.to_i >= 500 ? RetryableError : Error

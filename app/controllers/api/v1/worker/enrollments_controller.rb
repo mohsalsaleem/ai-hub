@@ -7,8 +7,8 @@ module Api
         CHALLENGE_PREFIX = "aihub-worker-enrollment/v1\n"
 
         def create
-          worker = ::Worker.authenticate(bearer)
-          return render json: { error: "invalid_enrollment_token" }, status: :unauthorized unless worker
+          grant = WorkerEnrollmentGrant.authenticate(bearer)
+          return render json: { error: "invalid_or_expired_enrollment_grant" }, status: :unauthorized unless grant
 
           public_key_pem = params.require(:public_key).to_s
           proof_encoded = params.require(:proof).to_s
@@ -24,13 +24,22 @@ module Api
           challenge = "#{CHALLENGE_PREFIX}#{fingerprint}"
           return render json: { error: "invalid_key_proof" }, status: :unprocessable_entity unless public_key.verify(nil, proof, challenge)
 
-          if worker.enrolled? && worker.key_fingerprint != fingerprint
-            return render json: { error: "identity_already_enrolled" }, status: :conflict
-          end
+          grant.with_lock do
+            unless grant.reload.usable?
+              return render json: { error: "invalid_or_expired_enrollment_grant" }, status: :unauthorized
+            end
 
-          worker.update!(public_key_pem: public_key.public_to_pem, key_fingerprint: fingerprint,
-            enrolled_at: worker.enrolled_at || Time.current)
-          render json: { worker_id: worker.id, key_fingerprint: fingerprint, enrolled_at: worker.enrolled_at }
+            worker = grant.worker
+            if worker.enrolled? && worker.key_fingerprint != fingerprint
+              return render json: { error: "identity_already_enrolled" }, status: :conflict
+            end
+
+            worker.update!(public_key_pem: public_key.public_to_pem, key_fingerprint: fingerprint,
+              enrolled_at: worker.enrolled_at || Time.current)
+            grant.consume!
+            worker.record_identity_event!("enrolled")
+            render json: { worker_id: worker.id, key_fingerprint: fingerprint, enrolled_at: worker.enrolled_at }
+          end
         rescue ActionController::ParameterMissing, ArgumentError, OpenSSL::PKey::PKeyError
           render json: { error: "invalid_enrollment_request" }, status: :unprocessable_entity
         end

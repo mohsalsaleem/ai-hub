@@ -10,7 +10,7 @@
     <span class="overline">Shown once</span>
     <h2>Copy your worker token</h2>
     <div class="token-value"><code><%= flash[:issued_token] %></code></div>
-    <p>Configure it as <span class="mono">AI_HUB_WORKER_TOKEN</span> on the worker host. The official worker uses it once to enroll a signed device identity.</p>
+    <p>Configure it as <span class="mono">AI_HUB_WORKER_TOKEN</span> within 24 hours. The official worker uses it once to enroll a signed device identity.</p>
   </section>
 <% end %>
 
@@ -40,6 +40,7 @@
         <% worker.capabilities.each do |capability| %><span class="chip"><%= capability %></span><% end %>
       </div>
       <% if worker.enrolled? %><p class="last-seen">Key: <span class="mono"><%= worker.key_fingerprint.first(12) %></span> · enrolled <%= time_ago_in_words(worker.enrolled_at) %> ago</p><% end %>
+      <% if !worker.enrolled? && (grant = worker.worker_enrollment_grants.select(&:usable?).max_by(&:expires_at)) %><p class="last-seen">Enrollment grant expires <%= time_ago_in_words(grant.expires_at) %> from now</p><% end %>
       <p class="last-seen">Last activity: <%= worker.last_seen_at ? time_ago_in_words(worker.last_seen_at) + " ago" : "never" %></p>
       <% if owner? && worker.active? %>
         <div class="card-actions">
@@ -58,6 +59,7 @@
             <% end %>
             <%= form.submit "Save routing", class: "button" %>
           <% end %>
+          <% if worker.worker_identity_events.any? %><details class="audit-trail"><summary>Identity activity</summary><ol><% worker.worker_identity_events.sort_by(&:created_at).reverse.first(5).each do |event| %><li><span><%= event.event_type.humanize %></span><time datetime="<%= event.created_at.iso8601 %>"><%= time_ago_in_words(event.created_at) %> ago</time></li><% end %></ol></details><% end %>
         </dialog>
       <% end %>
     </article>

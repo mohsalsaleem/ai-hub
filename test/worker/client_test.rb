@@ -39,4 +39,34 @@ class WorkerClientTest < ActiveSupport::TestCase
       assert public_key.verify(nil, Base64.strict_decode64(claim["X-Worker-Signature"]), canonical)
     end
   end
+
+  test "discovers an unenrolled identity and retries the signed request after enrollment" do
+    Dir.mktmpdir do |directory|
+      config = AiHubWorker::Config.new(hub_url: "https://hub.example", worker_token: "secret",
+        worker_id: "worker-one", model_url: "http://model.test", model: "model",
+        model_api_key: "local", state_path: directory, poll_wait_seconds: 0)
+      requests = []
+      responses = [
+        Struct.new(:code, :body).new("401", '{"error":"invalid_worker_identity"}'),
+        Struct.new(:code, :body).new("200", "{}"),
+        Struct.new(:code, :body).new("200", '{"job":null}')
+      ]
+      transport = lambda do |*args, **options, &block|
+        http = Object.new
+        http.define_singleton_method(:request) do |request|
+          requests << request
+          responses.shift
+        end
+        block.call(http)
+      end
+
+      result = AiHubWorker::Client.new(config, http_start: transport).claim(wait_seconds: 0)
+
+      assert_nil result["job"]
+      assert_nil requests.first["Authorization"]
+      assert_equal "Bearer secret", requests.second["Authorization"]
+      assert_nil requests.third["Authorization"]
+      assert AiHubWorker::Identity.new(directory).enrolled_with?("secret")
+    end
+  end
 end

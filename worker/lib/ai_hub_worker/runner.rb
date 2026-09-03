@@ -17,7 +17,6 @@ module AiHubWorker
       @logger.call("AI Hub worker #{AiHubWorker::VERSION} started")
       until @stopping
         begin
-          @client.enroll
           unless drain_outbox
             @sleeper.call(5)
             next

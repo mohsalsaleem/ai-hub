@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_03_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_03_200000) do
   create_table "hub_applications", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
@@ -109,6 +109,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_190000) do
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
   end
 
+  create_table "worker_enrollment_grants", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "revoked_at"
+    t.string "token_digest", null: false
+    t.string "token_hint"
+    t.datetime "updated_at", null: false
+    t.datetime "used_at"
+    t.integer "worker_id", null: false
+    t.index ["expires_at"], name: "index_worker_enrollment_grants_on_expires_at"
+    t.index ["token_digest"], name: "index_worker_enrollment_grants_on_token_digest", unique: true
+    t.index ["worker_id"], name: "index_worker_enrollment_grants_on_worker_id"
+  end
+
+  create_table "worker_identity_events", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.json "details", default: {}, null: false
+    t.string "event_type", null: false
+    t.string "key_fingerprint"
+    t.integer "worker_id", null: false
+    t.index ["worker_id", "created_at"], name: "index_worker_identity_events_on_worker_id_and_created_at"
+    t.index ["worker_id"], name: "index_worker_identity_events_on_worker_id"
+  end
+
   create_table "worker_pool_memberships", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -173,6 +197,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_190000) do
   add_foreign_key "memberships", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "task_definitions", "hub_applications"
+  add_foreign_key "worker_enrollment_grants", "workers"
+  add_foreign_key "worker_identity_events", "workers"
   add_foreign_key "worker_pool_memberships", "worker_pools"
   add_foreign_key "worker_pool_memberships", "workers"
   add_foreign_key "worker_pools", "organizations"

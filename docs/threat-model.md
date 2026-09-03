@@ -25,7 +25,7 @@ authenticate a worker but do not make an untrusted model host confidential.
 
 | Threat | Control |
 | --- | --- |
-| Stolen enrollment token | One worker per token; rotate to reset and re-enroll |
+| Stolen enrollment grant | 24-hour expiry, one successful use, rotate to revoke and replace |
 | Replayed runtime request | Ed25519 signature, five-minute timestamp window, stored nonce |
 | Forged worker label | Database identity comes from the key; reported ID is display metadata |
 | Cross-tenant claiming | Organization-scoped claim query and definition lookup |
@@ -35,7 +35,7 @@ authenticate a worker but do not make an untrusted model host confidential.
 
 ## Known gaps
 
-- The enrollment bearer token remains a recovery credential and must be secret.
+- An unused enrollment grant remains a recovery credential until it expires or is revoked.
 - Private keys are file-protected but are not yet stored in platform key storage.
 - Nonce cleanup occurs during authentication and should become scheduled work at scale.
 - AI Hub does not yet attest worker hardware, model, software build, or operator identity.
@@ -43,8 +43,8 @@ authenticate a worker but do not make an untrusted model host confidential.
 
 ## Next security milestones
 
-1. Replace reusable enrollment tokens with expiring, one-use enrollment grants.
-2. Record identity events for enrollment, rotation, revocation, and failures.
+1. Add rate limits and scheduled cleanup for enrollment grants and identity events.
+2. Record bounded authentication-failure events without creating a storage denial of service.
 3. Use platform key storage where supported.
-4. Add signed model manifests and owner trust policies before cross-organization routing.
+4. Add signed model manifests and provider verification before cross-organization routing.
 5. Complete a focused security review before accepting jobs from unknown operators.

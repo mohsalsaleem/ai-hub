@@ -203,6 +203,12 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
   test "enrolled workers require signed requests" do
     fingerprint = enroll_worker
     assert_equal fingerprint, @worker.reload.key_fingerprint
+    assert @worker.worker_enrollment_grants.first.used_at.present?
+    assert_equal %w[grant_issued enrolled], @worker.worker_identity_events.order(:created_at).pluck(:event_type)
+
+    post api_v1_worker_enroll_path, headers: { "Authorization" => "Bearer #{@worker_token}" }, as: :json,
+      params: { public_key: @worker_key.public_to_pem, proof: "unused" }
+    assert_response :unauthorized
 
     post api_v1_worker_claims_path, params: { wait_seconds: 0 }, headers: worker_headers, as: :json
     assert_response :unauthorized
@@ -249,5 +255,7 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
     assert_not @worker.reload.enrolled?
     assert_nil @worker.key_fingerprint
     assert Worker.authenticate(new_token)
+    assert WorkerEnrollmentGrant.authenticate(new_token)
+    assert_equal "identity_reset", @worker.worker_identity_events.order(:created_at).last.event_type
   end
 end
