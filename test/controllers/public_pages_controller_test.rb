@@ -18,7 +18,7 @@ class PublicPagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "h1", "Connect applications to private models."
     assert_match "/v1/responses", response.body
     assert_match "AI_HUB_WORKER_TOKEN", response.body
-    assert_select "a[target='_blank'][rel='noopener noreferrer']", 3
+    assert_select "a[target='_blank'][rel='noopener noreferrer']", 6
   end
 
   test "signed-in visitors use the dashboard" do

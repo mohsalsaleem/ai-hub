@@ -3,8 +3,21 @@ class Worker < ApplicationRecord
 
   belongs_to :organization
   has_many :jobs, dependent: :nullify
+  has_many :worker_request_nonces, dependent: :delete_all
 
   validates :name, presence: true
+
+  def enrolled? = public_key_pem.present? && key_fingerprint.present?
+
+  def rotate_token!
+    transaction do
+      plaintext = super
+      update!(public_key_pem: nil, key_fingerprint: nil, enrolled_at: nil,
+        identity_rotated_at: Time.current)
+      worker_request_nonces.delete_all
+      plaintext
+    end
+  end
 
   def seen!(reported_id:, version:, capabilities:)
     update_columns(

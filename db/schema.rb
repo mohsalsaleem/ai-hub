@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_03_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_03_180000) do
   create_table "hub_applications", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
@@ -106,20 +106,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_150000) do
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
   end
 
+  create_table "worker_request_nonces", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.string "nonce_digest", null: false
+    t.datetime "updated_at", null: false
+    t.integer "worker_id", null: false
+    t.index ["expires_at"], name: "index_worker_request_nonces_on_expires_at"
+    t.index ["worker_id", "nonce_digest"], name: "index_worker_request_nonces_on_worker_id_and_nonce_digest", unique: true
+    t.index ["worker_id"], name: "index_worker_request_nonces_on_worker_id"
+  end
+
   create_table "workers", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.json "capabilities", default: [], null: false
     t.datetime "created_at", null: false
+    t.datetime "enrolled_at"
+    t.datetime "identity_rotated_at"
+    t.string "key_fingerprint"
     t.datetime "last_seen_at"
     t.json "latest_metrics", default: {}, null: false
     t.datetime "metrics_reported_at"
     t.string "name", null: false
     t.integer "organization_id", null: false
+    t.text "public_key_pem"
     t.string "reported_id"
     t.string "token_digest", null: false
     t.string "token_hint"
     t.datetime "updated_at", null: false
     t.string "version"
+    t.index ["key_fingerprint"], name: "index_workers_on_key_fingerprint", unique: true
     t.index ["organization_id"], name: "index_workers_on_organization_id"
     t.index ["token_digest"], name: "index_workers_on_token_digest", unique: true
   end
@@ -132,5 +148,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_150000) do
   add_foreign_key "memberships", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "task_definitions", "hub_applications"
+  add_foreign_key "worker_request_nonces", "workers"
   add_foreign_key "workers", "organizations"
 end

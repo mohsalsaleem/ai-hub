@@ -1,9 +1,24 @@
-# AI Hub protocol 0.1
+# AI Hub protocol 0.2
 
-All API requests use JSON and bearer authentication. Application credentials
-can register task definitions and submit/read only their own jobs. Worker
-credentials can claim compatible jobs, retrieve definitions, renew leases,
-and return results.
+All API requests use JSON. Application credentials use bearer authentication
+and can register task definitions and submit or read only their own jobs.
+Workers enroll an Ed25519 device identity, then sign runtime requests.
+
+## Worker identity
+
+New workers begin with an owner-issued bearer token. The official worker creates
+an Ed25519 key in its local state directory and calls
+`POST /api/v1/worker/enroll`. The private key never leaves the worker host.
+
+After enrollment, bearer authentication is disabled for that worker. Each
+runtime request carries the key fingerprint, timestamp, random nonce, and a
+signature binding the HTTP method, path, timestamp, nonce, and request body.
+The Hub rejects stale timestamps, altered requests, and reused nonces.
+
+Workers that have not enrolled remain compatible with bearer authentication so
+existing deployments can upgrade without downtime. Rotating a worker token
+clears its enrolled identity and permits a fresh enrollment. See
+[worker identity](worker-identity.md) and the [threat model](threat-model.md).
 
 ## Task definitions
 
@@ -54,6 +69,7 @@ OpenAI-compatible application API:
 
 Worker API:
 
+- `POST /api/v1/worker/enroll`
 - `POST /api/v1/worker/claims`
 - `GET /api/v1/worker/task_definitions/:digest`
 - `POST /api/v1/worker/jobs/:id/renew`

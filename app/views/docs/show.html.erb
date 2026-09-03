@@ -5,7 +5,7 @@
   <div class="docs-layout">
     <aside class="docs-nav" aria-label="Documentation sections">
       <span class="overline">Documentation</span>
-      <a href="#overview">Overview</a><a href="#quickstart">Quickstart</a><a href="#model-profile">Model profiles</a><a href="#openai-api">OpenAI-compatible API</a><a href="#background">Background responses</a><a href="#native-api">Native job API</a><a href="#limits">Limits</a>
+      <a href="#overview">Overview</a><a href="#quickstart">Quickstart</a><a href="#model-profile">Model profiles</a><a href="#openai-api">OpenAI-compatible API</a><a href="#background">Background responses</a><a href="#native-api">Native job API</a><a href="#worker-identity">Worker identity</a><a href="#limits">Limits</a>
     </aside>
     <main class="docs-content">
       <section id="overview"><span class="eyebrow">AI Hub docs</span><h1>Connect applications to private models.</h1><p class="docs-lead">AI Hub is a self-hosted control plane with an outbound-only worker. Applications receive scoped tokens and can use either familiar OpenAI endpoints or durable structured jobs.</p></section>
@@ -42,6 +42,8 @@ curl https://your-hub.example/v1/responses/job_... \
       <section id="native-api"><h2>Native job API</h2><p>Use native jobs when you need schema-validated structured output. First register an immutable definition, then submit its reference with an idempotency key.</p><pre><code>POST /api/v1/task_definitions
 POST /api/v1/jobs
 GET  /api/v1/jobs/:id</code></pre><p>Workers advertise executor capabilities and claim only compatible jobs inside their organization. The worker never contains application-specific business logic.</p></section>
+
+      <section id="worker-identity"><h2>Worker identity</h2><p>The official worker creates an Ed25519 device key on first boot and enrolls its public identity using the owner-issued worker token. Every later runtime request is signed and bound to its method, path, timestamp, nonce, and body.</p><div class="docs-callout"><strong>Safe rolling upgrade.</strong><span>Unenrolled workers can continue using their bearer token. Once enrolled, a worker must use signed requests. Rotating its token resets the identity for recovery.</span></div><p>Read the <%= external_link_to "identity protocol", "https://github.com/mohsalsaleem/ai-hub/blob/main/docs/worker-identity.md" %>, <%= external_link_to "threat model", "https://github.com/mohsalsaleem/ai-hub/blob/main/docs/threat-model.md" %>, and <%= external_link_to "decentralized roadmap", "https://github.com/mohsalsaleem/ai-hub/blob/main/docs/decentralized-roadmap.md" %>.</p></section>
 
       <section id="limits"><h2>Current limits</h2><ul><li>Text inputs and outputs only for OpenAI-compatible endpoints.</li><li>No streaming, tools, images, files, audio, or embeddings yet.</li><li>Job payloads and results are limited to 256 KiB.</li><li>SQLite deployments must run one Hub replica on durable storage.</li><li>Use HTTPS and keep application and worker tokens in a secret manager.</li></ul><p>For the complete wire contract, operational behavior, and examples, see the project’s <%= external_link_to "integration guide", "https://github.com/mohsalsaleem/ai-hub/blob/main/docs/openai-compatibility.md" %> and <%= external_link_to "protocol reference", "https://github.com/mohsalsaleem/ai-hub/blob/main/docs/protocol.md" %>.</p></section>
     </main>

@@ -28,6 +28,7 @@ Rails.application.routes.draw do
       resources :jobs, only: [ :create, :show ]
 
       namespace :worker do
+        post "enroll", to: "enrollments#create"
         post "claims", to: "claims#create"
         get "task_definitions/:digest", to: "task_definitions#show", as: :task_definition
         post "jobs/:job_id/renew", to: "jobs#renew", as: :job_renew

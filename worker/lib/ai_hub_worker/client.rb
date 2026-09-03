@@ -11,10 +11,21 @@ module AiHubWorker
     end
     RetryableError = Class.new(Error)
 
-    def initialize(config)
+    def initialize(config, http_start: Net::HTTP.method(:start))
       @base = URI(config.hub_url.sub(%r{/+\z}, ""))
       @token = config.worker_token
       @worker_id = config.worker_id
+      @identity = Identity.new(config.state_path)
+      @enrolled = false
+      @http_start = http_start
+    end
+
+    def enroll
+      return if @enrolled
+
+      post("/api/v1/worker/enroll", { public_key: @identity.public_key_pem,
+        proof: Base64.strict_encode64(@identity.enrollment_proof) }, signed: false)
+      @enrolled = true
     end
 
     def claim(wait_seconds:)
@@ -35,19 +46,20 @@ module AiHubWorker
 
     private
 
-    def post(path, payload) = request(:post, path, payload)
+    def post(path, payload, signed: true) = request(:post, path, payload, signed:)
 
-    def request(method, path, payload = nil)
+    def request(method, path, payload = nil, signed: true)
       uri = @base.dup
       uri.path = path
       request = method == :get ? Net::HTTP::Get.new(uri) : Net::HTTP::Post.new(uri)
-      request["Authorization"] = "Bearer #{@token}"
       request["Content-Type"] = "application/json"
       request["X-Worker-Id"] = @worker_id
       request["X-Worker-Version"] = AiHubWorker::VERSION
       request["X-Worker-Capabilities"] = "structured_generation,chat_completion"
-      request.body = JSON.generate(payload) if payload
-      response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
+      body = payload ? JSON.generate(payload) : ""
+      request.body = body if payload
+      signed ? sign!(request, method, uri.request_uri, body) : request["Authorization"] = "Bearer #{@token}"
+      response = @http_start.call(uri.host, uri.port, use_ssl: uri.scheme == "https",
         open_timeout: 10, read_timeout: 35) { |http| http.request(request) }
       body = response.body.to_s.empty? ? {} : JSON.parse(response.body)
       return body if response.code.to_i.between?(200, 299)
@@ -57,6 +69,17 @@ module AiHubWorker
       raise error_class.new(error, status: response.code.to_i, code: body["error"])
     rescue Net::OpenTimeout, Net::ReadTimeout, SocketError, SystemCallError => e
       raise RetryableError, "Hub unavailable: #{e.class}"
+    end
+
+    def sign!(request, method, path, body)
+      timestamp = Time.now.to_i.to_s
+      nonce = SecureRandom.hex(24)
+      message = [ method.to_s.upcase, path, timestamp, nonce,
+        OpenSSL::Digest::SHA256.hexdigest(body) ].join("\n")
+      request["X-Worker-Key-Id"] = @identity.fingerprint
+      request["X-Worker-Timestamp"] = timestamp
+      request["X-Worker-Nonce"] = nonce
+      request["X-Worker-Signature"] = Base64.strict_encode64(@identity.sign(message))
     end
   end
 end

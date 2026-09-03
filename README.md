@@ -1,10 +1,10 @@
 # AI Hub
 
-AI Hub is a self-hosted, outbound-only job bridge between applications and
-private local language models. Applications submit durable structured jobs to
-the Hub; a worker beside the model claims them over HTTPS and returns
-schema-validated results. The model machine never accepts an inbound internet
-connection.
+AI Hub is an open-source, outbound-only execution platform connecting
+applications to private, shared, and eventually independently operated AI
+workers. Applications submit durable structured jobs to the Hub; a worker
+beside the model claims them over HTTPS and returns schema-validated results.
+The model machine never accepts an inbound internet connection.
 
 This repository is an early `0.2.0-dev` implementation. It deliberately has no
 message broker, arbitrary code execution, tool calling, or hosted dependency.
@@ -21,6 +21,8 @@ Applications -> Rails Hub + SQLite <- long polling -> local worker -> model
   and keep `storage/` on durable disk.
 - The Ruby worker caches definitions and stores completed results in a bounded
   local SQLite outbox until the Hub acknowledges them.
+- Official workers enroll a local Ed25519 identity and sign every runtime
+  request. Existing unenrolled workers retain bearer-token compatibility.
 - Applications own deterministic validation and business persistence.
 - Organizations are isolated tenants. Applications, definitions, jobs, tokens,
   and workers are always resolved through the signed-in organization.
@@ -67,6 +69,12 @@ docker compose up -d --build
 
 The Compose file can also read `AI_HUB_WORKER_TOKEN` directly from the shell;
 an `.env` file is optional.
+
+On first connection, the official worker creates an Ed25519 key in
+`AI_HUB_STATE_PATH` and enrolls its public identity using the worker token.
+After enrollment, runtime requests are signed and the bearer token is no longer
+accepted for that worker. Rotating the token in the console resets the identity
+and permits a fresh enrollment.
 
 On the current macOS model host, `worker/com.mohsal.ai-hub-worker.plist` runs
 the worker as a login service. Its wrapper reads the token from macOS Keychain;
@@ -168,7 +176,10 @@ SDK configuration, request semantics, timeouts, and operational guidance.
 - Browser access uses Rails' built-in password authentication and signed
   database-backed sessions. Registration is intentionally open in this first
   release; email verification and password recovery are not yet enabled.
-- Application and worker credentials are separate SHA-256-digested bearer tokens.
+- Application credentials and initial worker enrollment credentials are
+  separate SHA-256-digested bearer tokens.
+- Enrolled workers authenticate runtime requests with an Ed25519 signature;
+  timestamps and stored nonces prevent altered or replayed requests.
 - Job input and output requests are capped at 256 KiB.
 - Definitions are capped at 96 KiB per API request.
 - Leases expire and can be reclaimed after worker failure.
@@ -180,6 +191,10 @@ SDK configuration, request semantics, timeouts, and operational guidance.
   and mutation; worker claims and definition lookup are tenant-scoped as well.
 
 See [docs/protocol.md](docs/protocol.md) for lifecycle and API semantics.
+See [docs/worker-identity.md](docs/worker-identity.md) and
+[docs/threat-model.md](docs/threat-model.md) for worker trust boundaries.
+The path from private deployments to independently operated workers is in the
+[decentralized roadmap](docs/decentralized-roadmap.md).
 
 ## Tests
 

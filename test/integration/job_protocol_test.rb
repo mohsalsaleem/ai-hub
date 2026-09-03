@@ -1,4 +1,5 @@
 require "test_helper"
+require "base64"
 
 class JobProtocolTest < ActionDispatch::IntegrationTest
   setup do
@@ -16,6 +17,25 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
   def worker_headers
     { "Authorization" => "Bearer #{@worker_token}", "X-Worker-Id" => "test-worker",
       "X-Worker-Capabilities" => "structured_generation" }
+  end
+
+  def enroll_worker
+    @worker_key = OpenSSL::PKey.generate_key("ED25519")
+    fingerprint = OpenSSL::Digest::SHA256.hexdigest(@worker_key.public_to_der)
+    proof = @worker_key.sign(nil, "aihub-worker-enrollment/v1\n#{fingerprint}")
+    post api_v1_worker_enroll_path, headers: { "Authorization" => "Bearer #{@worker_token}" }, as: :json,
+      params: { public_key: @worker_key.public_to_pem, proof: Base64.strict_encode64(proof) }
+    assert_response :success
+    fingerprint
+  end
+
+  def signed_worker_headers(path:, body:, nonce: SecureRandom.hex(24), timestamp: Time.current.to_i.to_s)
+    fingerprint = @worker.reload.key_fingerprint
+    canonical = WorkerRequestSignature.canonical(method: "POST", path:, timestamp:, nonce:, body:)
+    { "Content-Type" => "application/json", "X-Worker-Key-Id" => fingerprint,
+      "X-Worker-Timestamp" => timestamp, "X-Worker-Nonce" => nonce,
+      "X-Worker-Signature" => Base64.strict_encode64(@worker_key.sign(nil, canonical)),
+      "X-Worker-Id" => "test-worker", "X-Worker-Capabilities" => "structured_generation" }
   end
 
   test "application submits an idempotent job and reads its state" do
@@ -149,5 +169,56 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_nil response.parsed_body["job"]
+  end
+
+  test "enrolled workers require signed requests" do
+    fingerprint = enroll_worker
+    assert_equal fingerprint, @worker.reload.key_fingerprint
+
+    post api_v1_worker_claims_path, params: { wait_seconds: 0 }, headers: worker_headers, as: :json
+    assert_response :unauthorized
+
+    body = JSON.generate(wait_seconds: 0)
+    headers = signed_worker_headers(path: api_v1_worker_claims_path, body:)
+    post api_v1_worker_claims_path, params: body, headers: headers
+    assert_response :success
+  end
+
+  test "signed worker requests cannot be replayed" do
+    enroll_worker
+    body = JSON.generate(wait_seconds: 0)
+    headers = signed_worker_headers(path: api_v1_worker_claims_path, body:)
+
+    post api_v1_worker_claims_path, params: body, headers: headers
+    assert_response :success
+    post api_v1_worker_claims_path, params: body, headers: headers
+    assert_response :conflict
+    assert_equal "replayed_request", response.parsed_body.fetch("error")
+  end
+
+  test "signed worker requests reject stale timestamps and altered bodies" do
+    enroll_worker
+
+    stale_body = JSON.generate(wait_seconds: 0)
+    stale_headers = signed_worker_headers(path: api_v1_worker_claims_path, body: stale_body,
+      timestamp: 10.minutes.ago.to_i.to_s)
+    post api_v1_worker_claims_path, params: stale_body, headers: stale_headers
+    assert_response :unauthorized
+
+    signed_body = JSON.generate(wait_seconds: 0)
+    altered_body = JSON.generate(wait_seconds: 1)
+    altered_headers = signed_worker_headers(path: api_v1_worker_claims_path, body: signed_body)
+    post api_v1_worker_claims_path, params: altered_body, headers: altered_headers
+    assert_response :unauthorized
+  end
+
+  test "rotating a worker token clears its enrolled identity" do
+    enroll_worker
+
+    new_token = @worker.reload.rotate_token!
+
+    assert_not @worker.reload.enrolled?
+    assert_nil @worker.key_fingerprint
+    assert Worker.authenticate(new_token)
   end
 end
