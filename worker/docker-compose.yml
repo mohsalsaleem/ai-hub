@@ -1,0 +1,14 @@
+services:
+  worker:
+    build: .
+    env_file: .env
+    environment:
+      AI_HUB_STATE_PATH: /state
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ai_hub_worker_state:/state
+    restart: unless-stopped
+
+volumes:
+  ai_hub_worker_state:

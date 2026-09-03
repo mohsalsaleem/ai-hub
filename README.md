@@ -45,6 +45,15 @@ AI_MODEL=local-model \
 bundle exec ruby worker/worker.rb
 ```
 
+Or run the standalone worker container:
+
+```bash
+cd worker
+cp .env.example .env
+# Put the issued worker token in .env, then:
+docker compose up -d --build
+```
+
 Open `http://127.0.0.1:3000` for job, worker, and task health.
 
 ## First job
