@@ -4,6 +4,13 @@ module ApplicationHelper
     link_to label, path, class: "nav-link#{' is-active' if active}"
   end
 
+  def external_link_to(label, url, **options)
+    options[:target] = "_blank"
+    options[:rel] = "noopener noreferrer"
+    options[:aria] = { label: "#{label} (opens in a new tab)" }.merge(options.fetch(:aria, {}))
+    link_to label, url, **options
+  end
+
   def status_badge(status)
     tone = case status.to_s
     when "completed", "active", "online" then "good"
