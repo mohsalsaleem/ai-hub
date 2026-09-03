@@ -117,6 +117,18 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "chat definitions receive the OpenAI-compatible schemas by default" do
+    post api_v1_task_definitions_path, headers: application_headers, as: :json, params: {
+      task_definition: { key: "assistant.general", version: 1, executor: "chat_completion",
+        instructions: "Answer clearly." }
+    }
+
+    assert_response :created
+    definition = @application.task_definitions.find_by!(key: "assistant.general")
+    assert_equal TaskDefinition::CHAT_INPUT_SCHEMA.deep_stringify_keys, definition.input_schema
+    assert_equal TaskDefinition::CHAT_OUTPUT_SCHEMA.deep_stringify_keys, definition.output_schema
+  end
+
   test "workers only claim jobs matching advertised capabilities" do
     vision = @application.task_definitions.create!(key: "sums.vision", version: 1, instructions: "Read image",
       requirements: { "vision" => true }, input_schema: { type: "object" }, output_schema: { type: "object" })

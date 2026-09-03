@@ -37,4 +37,31 @@ class ExecutorTest < ActiveSupport::TestCase
 
     assert_raises(AiHubWorker::Executor::Error) { executor.execute(definition, {}) }
   end
+
+  test "executes a chat completion definition without structured output" do
+    config = AiHubWorker::Config.new(hub_url: "http://hub", worker_token: "token", worker_id: "worker",
+      model_url: "http://model.test/v1", model: "local-chat", model_api_key: "local",
+      state_path: "/tmp/state", poll_wait_seconds: 0)
+    captured = nil
+    response = FakeResponse.new("200", JSON.generate(
+      choices: [ { message: { content: "Hello there" }, finish_reason: "stop" } ],
+      usage: { prompt_tokens: 2, completion_tokens: 2, total_tokens: 4 }
+    ))
+    executor = AiHubWorker::Executor.new(config, transport: lambda { |request, _uri|
+      captured = JSON.parse(request.body)
+      response
+    })
+    definition = {
+      "key" => "assistant.general", "executor" => "chat_completion", "instructions" => "Be concise.",
+      "input_schema" => TaskDefinition::CHAT_INPUT_SCHEMA.deep_stringify_keys,
+      "output_schema" => TaskDefinition::CHAT_OUTPUT_SCHEMA.deep_stringify_keys
+    }
+
+    result = executor.execute(definition, { "messages" => [ { "role" => "user", "content" => "Hi" } ] })
+
+    assert_equal "Hello there", result.fetch("content")
+    assert_equal "local-chat", captured.fetch("model")
+    assert_equal "Be concise.", captured.fetch("messages").first.fetch("content")
+    assert_nil captured["response_format"]
+  end
 end

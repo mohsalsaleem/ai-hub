@@ -12,9 +12,11 @@ executor, instructions, input/output JSON Schemas, and capability requirements.
 It receives a canonical SHA-256 digest and cannot be changed in place. Publish
 a new version when instructions or schemas change.
 
-The initial executor is `structured_generation`. Requirements are boolean
-capability names; a worker receives a job only when it advertises its executor
-and every required capability.
+The `structured_generation` executor validates JSON input and output against
+the application schemas. The `chat_completion` executor uses the standard chat
+schemas supplied by AI Hub and exposes the definition as an OpenAI-compatible
+model. Requirements are boolean capability names; a worker receives a job only
+when it advertises its executor and every required capability.
 
 ## Job lifecycle
 
@@ -42,6 +44,13 @@ Application API:
 - `GET /api/v1/task_definitions`
 - `POST /api/v1/jobs`
 - `GET /api/v1/jobs/:id`
+
+OpenAI-compatible application API:
+
+- `GET /v1/models`
+- `POST /v1/chat/completions`
+- `POST /v1/responses`
+- `GET /v1/responses/:id`
 
 Worker API:
 

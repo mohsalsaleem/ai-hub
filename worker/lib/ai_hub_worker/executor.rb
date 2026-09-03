@@ -10,10 +10,13 @@ module AiHubWorker
     end
 
     def execute(definition, input)
-      raise Error, "Unsupported executor" unless definition.fetch("executor") == "structured_generation"
       raise Error, "Input schema mismatch" unless JSONSchemer.schema(definition.fetch("input_schema")).valid?(input)
 
-      output = model_call(definition, input)
+      output = case definition.fetch("executor")
+      when "structured_generation" then structured_call(definition, input)
+      when "chat_completion" then chat_call(definition, input)
+      else raise Error, "Unsupported executor"
+      end
       raise Error, "Output schema mismatch" unless JSONSchemer.schema(definition.fetch("output_schema")).valid?(output)
 
       output
@@ -21,7 +24,7 @@ module AiHubWorker
 
     private
 
-    def model_call(definition, input)
+    def structured_call(definition, input)
       uri = @base.dup
       uri.path = "#{uri.path.sub(%r{/+\z}, "")}/chat/completions"
       request = Net::HTTP::Post.new(uri)
@@ -47,6 +50,34 @@ module AiHubWorker
       raise Error, "Model returned invalid JSON: #{e.message}"
     rescue Net::OpenTimeout, Net::ReadTimeout, SocketError, SystemCallError => e
       raise Error, "Model unavailable: #{e.class}"
+    end
+
+    def chat_call(definition, input)
+      uri = completion_uri
+      request = Net::HTTP::Post.new(uri)
+      request["Authorization"] = "Bearer #{@api_key}"
+      request["Content-Type"] = "application/json"
+      messages = input.fetch("messages").dup
+      instructions = definition.fetch("instructions").to_s
+      messages.unshift({ "role" => "system", "content" => instructions }) if instructions.length.positive?
+      request.body = JSON.generate({ model: @model, messages: }.merge(input.slice("temperature", "top_p", "max_tokens", "stop")))
+      response = @transport.call(request, uri)
+      raise Error, "Model returned HTTP #{response.code}" unless response.code.to_i.between?(200, 299)
+
+      body = JSON.parse(response.body)
+      choice = body.fetch("choices").first || {}
+      { "content" => choice.dig("message", "content").to_s,
+        "finish_reason" => choice["finish_reason"], "usage" => body["usage"] || {} }
+    rescue JSON::ParserError, KeyError => e
+      raise Error, "Model returned invalid response: #{e.message}"
+    rescue Net::OpenTimeout, Net::ReadTimeout, SocketError, SystemCallError => e
+      raise Error, "Model unavailable: #{e.class}"
+    end
+
+    def completion_uri
+      uri = @base.dup
+      uri.path = "#{uri.path.sub(%r{/+\z}, "")}/chat/completions"
+      uri
     end
 
     def http_call(request, uri)

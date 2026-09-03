@@ -45,7 +45,7 @@ module AiHubWorker
       request["Content-Type"] = "application/json"
       request["X-Worker-Id"] = @worker_id
       request["X-Worker-Version"] = AiHubWorker::VERSION
-      request["X-Worker-Capabilities"] = "structured_generation"
+      request["X-Worker-Capabilities"] = "structured_generation,chat_completion"
       request.body = JSON.generate(payload) if payload
       response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
         open_timeout: 10, read_timeout: 35) { |http| http.request(request) }

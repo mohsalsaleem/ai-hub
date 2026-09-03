@@ -36,6 +36,15 @@ Rails.application.routes.draw do
     end
   end
 
+  namespace :openai, path: nil do
+    namespace :v1, path: "v1" do
+      get "models", to: "models#index"
+      post "responses", to: "responses#create"
+      get "responses/:id", to: "responses#show"
+      post "chat/completions", to: "chat_completions#create"
+    end
+  end
+
   # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker

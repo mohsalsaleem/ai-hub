@@ -12,8 +12,10 @@ class TaskDefinitionsController < ApplicationController
 
   def new
     @application = current_organization.hub_applications.find(params[:application_id])
-    @definition = @application.task_definitions.new(version: 1, executor: "structured_generation",
-      input_schema: default_schema, output_schema: default_schema)
+    executor = params[:executor].presence_in(TaskDefinition::EXECUTORS) || "structured_generation"
+    @definition = @application.task_definitions.new(version: 1, executor:,
+      input_schema: executor == "chat_completion" ? TaskDefinition::CHAT_INPUT_SCHEMA : default_schema,
+      output_schema: executor == "chat_completion" ? TaskDefinition::CHAT_OUTPUT_SCHEMA : default_schema)
   end
 
   def create

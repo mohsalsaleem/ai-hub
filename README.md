@@ -119,6 +119,47 @@ AI Hub 0.1 does not push callbacks or webhooks. Polling is currently the only
 application notification mechanism. Signed, retryable webhooks are planned;
 the status endpoint will remain the recovery path after they are introduced.
 
+## OpenAI-compatible API
+
+AI Hub also presents chat task definitions as OpenAI-compatible models. From an
+application's console page, choose **Add OpenAI model**, give the profile a key
+such as `assistant.general`, and publish its system instructions. The standard
+chat input and output schemas are filled in automatically.
+
+Use the application's existing token with an OpenAI client and set its base URL
+to the Hub's `/v1` path. Model IDs are immutable task references:
+
+```bash
+curl http://127.0.0.1:3000/v1/models \
+  -H 'Authorization: Bearer aih_...'
+
+curl -X POST http://127.0.0.1:3000/v1/chat/completions \
+  -H 'Authorization: Bearer aih_...' -H 'Content-Type: application/json' \
+  -d '{"model":"assistant.general@1","messages":[{"role":"user","content":"Hello"}]}'
+```
+
+Chat Completions waits up to `AI_HUB_OPENAI_SYNC_TIMEOUT` seconds (60 by
+default) for the existing pull-based worker job. Worker claim requests are
+long polls, so an idle connected worker normally receives a new job within
+500 ms rather than after the configured long-poll duration.
+
+The Responses API supports both synchronous and durable background requests:
+
+```bash
+curl -X POST http://127.0.0.1:3000/v1/responses \
+  -H 'Authorization: Bearer aih_...' -H 'Content-Type: application/json' \
+  -d '{"model":"assistant.general@1","input":"Explain WAL mode","background":true}'
+
+curl http://127.0.0.1:3000/v1/responses/JOB_ID \
+  -H 'Authorization: Bearer aih_...'
+```
+
+The initial compatibility layer supports text messages, model listing,
+non-streaming Chat Completions, and synchronous/background Responses. Tool
+calls, images, audio, embeddings, and SSE streaming are not yet implemented.
+See [docs/openai-compatibility.md](docs/openai-compatibility.md) for model setup,
+SDK configuration, request semantics, timeouts, and operational guidance.
+
 ## Safety and limits
 
 - Task definitions are immutable by application, key, and version.
