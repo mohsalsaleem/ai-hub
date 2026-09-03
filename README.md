@@ -26,6 +26,8 @@ Applications -> Rails Hub + SQLite <- long polling -> local worker -> model
 - Applications own deterministic validation and business persistence.
 - Organizations are isolated tenants. Applications, definitions, jobs, tokens,
   and workers are always resolved through the signed-in organization.
+- Applications default to owner-operated workers. Owners can explicitly lower
+  the minimum trust level and restrict an application to a named worker pool.
 
 ## Local setup
 
@@ -169,6 +171,20 @@ non-streaming Chat Completions, and synchronous/background Responses. Tool
 calls, images, audio, embeddings, and SSE streaming are not yet implemented.
 See [docs/openai-compatibility.md](docs/openai-compatibility.md) for model setup,
 SDK configuration, request semantics, timeouts, and operational guidance.
+
+## Trust-aware routing
+
+Every worker has an owner-assigned trust level: owner operated, organization
+managed, verified provider, or external provider. Every application has a
+minimum accepted level and may be restricted to one organization-owned worker
+pool. A worker must pass organization isolation, application trust, pool, and
+task capability checks before it can claim a job.
+
+New applications require owner-operated workers by default. Lower-trust and
+independently operated workers receive no work until an owner explicitly opts
+an application into that trust level. Trust labels are policy assertions made
+by the organization owner; cryptographic enrollment proves device-key
+possession but does not verify the operator or model.
 
 ## Safety and limits
 

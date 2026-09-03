@@ -20,6 +20,24 @@ existing deployments can upgrade without downtime. Rotating a worker token
 clears its enrolled identity and permits a fresh enrollment. See
 [worker identity](worker-identity.md) and the [threat model](threat-model.md).
 
+## Trust-aware routing
+
+Workers have one owner-assigned trust tier, ordered from external provider,
+verified provider, organization managed, to owner operated. Applications
+default to owner operated as their minimum accepted tier. An owner may
+explicitly accept a lower tier and may bind an application to one worker pool.
+
+A claim is eligible only when all of these checks pass:
+
+1. The worker and application belong to the same organization.
+2. The worker meets the application's minimum trust tier.
+3. The worker belongs to the application's selected pool, when one is set.
+4. The worker advertises the executor and every required task capability.
+
+Worker trust is administrative policy, not cryptographic attestation. Signed
+requests prove possession of an enrolled device key. They do not prove who
+operates that device or which model it runs.
+
 ## Task definitions
 
 A definition contains an application-scoped `key`, positive integer `version`,

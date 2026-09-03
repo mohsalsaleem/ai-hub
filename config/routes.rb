@@ -2,16 +2,17 @@ Rails.application.routes.draw do
   resource :registration, only: %i[new create]
   resource :session, only: %i[new create destroy]
   resource :organization, only: %i[new create show update]
-  resources :applications, controller: "hub_applications", only: %i[index show new create] do
+  resources :applications, controller: "hub_applications", only: %i[index show new create update] do
     post :rotate_token, on: :member
     patch :revoke, on: :member
     resources :task_definitions, only: %i[new create]
   end
   resources :task_definitions, only: %i[index show]
   resources :jobs, only: %i[index show]
-  resources :workers, only: %i[index create destroy] do
+  resources :workers, only: %i[index create update destroy] do
     post :rotate_token, on: :member
   end
+  resources :worker_pools, only: %i[create destroy]
   get "dashboard", to: "dashboard#show", as: :dashboard
   get "docs", to: "docs#show", as: :docs
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html

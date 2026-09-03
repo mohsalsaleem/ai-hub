@@ -171,6 +171,35 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
     assert_nil response.parsed_body["job"]
   end
 
+  test "applications must opt in to lower-trust workers" do
+    @worker.update!(trust_tier: "verified")
+    job = @application.jobs.create!(task_definition: @definition,
+      idempotency_key: "trust-boundary", input: { text: "Private" })
+
+    post api_v1_worker_claims_path, params: { wait_seconds: 0 }, headers: worker_headers, as: :json
+    assert_response :success
+    assert_nil response.parsed_body["job"]
+
+    @application.update!(minimum_worker_trust: "verified")
+    post api_v1_worker_claims_path, params: { wait_seconds: 0 }, headers: worker_headers, as: :json
+    assert_equal job.public_id, response.parsed_body.dig("job", "id")
+  end
+
+  test "worker pools restrict claims after trust checks pass" do
+    allowed_pool = @organization.worker_pools.create!(name: "Private GPU")
+    @application.update!(worker_pool: allowed_pool)
+    job = @application.jobs.create!(task_definition: @definition,
+      idempotency_key: "pool-boundary", input: { text: "Private" })
+
+    post api_v1_worker_claims_path, params: { wait_seconds: 0 }, headers: worker_headers, as: :json
+    assert_response :success
+    assert_nil response.parsed_body["job"]
+
+    @worker.worker_pools << allowed_pool
+    post api_v1_worker_claims_path, params: { wait_seconds: 0 }, headers: worker_headers, as: :json
+    assert_equal job.public_id, response.parsed_body.dig("job", "id")
+  end
+
   test "enrolled workers require signed requests" do
     fingerprint = enroll_worker
     assert_equal fingerprint, @worker.reload.key_fingerprint

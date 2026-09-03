@@ -1,6 +1,88 @@
 <% content_for :title, "Workers · AI Hub" %>
-<% action = owner? ? capture do %><button class="button" type="button" onclick="document.getElementById('worker-form').showModal()">Issue worker token</button><% end : nil %>
-<%= render "shared/page_header", title: "Workers", description: "Connected model workers, capabilities and health", action: action %>
-<% if flash[:issued_token] %><section class="token-reveal" id="issued-token"><span class="overline">Shown once</span><h2>Copy your worker token</h2><div class="token-value"><code><%= flash[:issued_token] %></code></div><p>Configure it as <span class="mono">AI_HUB_WORKER_TOKEN</span> on the worker host. The official worker uses it once to enroll a signed device identity.</p></section><% end %>
-<div class="worker-grid"><% @workers.each do |worker| %><article class="worker-card" id="worker-<%= worker.id %>"><div class="worker-head"><div><span class="status-dot <%= worker.online? ? 'is-online' : 'is-offline' %>"></span><h2><%= worker.name %></h2></div><%= status_badge(worker.online? ? "online" : "offline") %></div><div class="worker-meta"><span><%= worker.version || "Version unknown" %></span><span><%= number_with_delimiter(worker.jobs.count) %> jobs</span></div><div class="chip-row"><span class="chip"><%= worker.enrolled? ? "Signed identity" : "Token identity" %></span><% worker.capabilities.each do |capability| %><span class="chip"><%= capability %></span><% end %><% if worker.capabilities.empty? %><span class="secondary">Capabilities reported on first connection</span><% end %></div><% if worker.enrolled? %><p class="last-seen">Key: <span class="mono"><%= worker.key_fingerprint.first(12) %></span> · enrolled <%= time_ago_in_words(worker.enrolled_at) %> ago</p><% end %><p class="last-seen">Last activity: <%= worker.last_seen_at ? time_ago_in_words(worker.last_seen_at) + " ago" : "never" %></p><% if owner? && worker.active? %><div class="card-actions"><%= button_to "Rotate token", rotate_token_worker_path(worker), method: :post, class: "text-button", data: { turbo_confirm: "Rotate the token and reset this worker identity?" } %><%= button_to "Revoke", worker_path(worker), method: :delete, class: "text-button danger", data: { turbo_confirm: "Revoke this worker?" } %></div><% end %></article><% end %><% if @workers.empty? %><div class="empty-panel"><h2>No workers connected</h2><p>Issue a worker token and configure it beside your model.</p></div><% end %></div>
-<dialog id="worker-form" class="dialog"><form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form><h2>Issue worker token</h2><p>Name the machine or runtime that will claim this organization’s jobs.</p><%= form_with model: @worker, url: workers_path, class: "stack-form" do |form| %><label>Worker name<%= form.text_field :name, required: true, autofocus: true, placeholder: "Home model worker" %></label><%= form.submit "Issue token", class: "button" %><% end %></dialog>
+<% action = owner? ? capture do %>
+  <button class="button button-secondary" type="button" onclick="document.getElementById('pool-form').showModal()">New pool</button>
+  <button class="button" type="button" onclick="document.getElementById('worker-form').showModal()">Issue worker token</button>
+<% end : nil %>
+<%= render "shared/page_header", title: "Workers", description: "Connected model workers, trust and routing pools", action: action %>
+
+<% if flash[:issued_token] %>
+  <section class="token-reveal" id="issued-token">
+    <span class="overline">Shown once</span>
+    <h2>Copy your worker token</h2>
+    <div class="token-value"><code><%= flash[:issued_token] %></code></div>
+    <p>Configure it as <span class="mono">AI_HUB_WORKER_TOKEN</span> on the worker host. The official worker uses it once to enroll a signed device identity.</p>
+  </section>
+<% end %>
+
+<% if @worker_pools.any? %>
+  <section class="pool-strip" aria-label="Worker pools">
+    <div><span class="overline">Routing pools</span><p>Applications can limit jobs to one pool.</p></div>
+    <div class="pool-list">
+      <% @worker_pools.each do |pool| %>
+        <span class="pool-pill"><%= pool.name %><small><%= pool.workers.count %></small><% if owner? %><%= button_to "×", worker_pool_path(pool), method: :delete, aria: { label: "Remove #{pool.name}" }, data: { turbo_confirm: "Remove this pool? Applications using it will allow any eligible worker." } %><% end %></span>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
+<div class="worker-grid">
+  <% @workers.each do |worker| %>
+    <article class="worker-card" id="worker-<%= worker.id %>">
+      <div class="worker-head">
+        <div><span class="status-dot <%= worker.online? ? 'is-online' : 'is-offline' %>"></span><h2><%= worker.name %></h2></div>
+        <%= status_badge(worker.online? ? "online" : "offline") %>
+      </div>
+      <div class="worker-meta"><span><%= worker.version || "Version unknown" %></span><span><%= number_with_delimiter(worker.jobs.count) %> jobs</span></div>
+      <div class="chip-row">
+        <span class="chip"><%= worker_trust_label(worker.trust_tier) %></span>
+        <span class="chip"><%= worker.enrolled? ? "Signed identity" : "Token identity" %></span>
+        <% worker.worker_pools.each do |pool| %><span class="chip chip-neutral"><%= pool.name %></span><% end %>
+        <% worker.capabilities.each do |capability| %><span class="chip"><%= capability %></span><% end %>
+      </div>
+      <% if worker.enrolled? %><p class="last-seen">Key: <span class="mono"><%= worker.key_fingerprint.first(12) %></span> · enrolled <%= time_ago_in_words(worker.enrolled_at) %> ago</p><% end %>
+      <p class="last-seen">Last activity: <%= worker.last_seen_at ? time_ago_in_words(worker.last_seen_at) + " ago" : "never" %></p>
+      <% if owner? && worker.active? %>
+        <div class="card-actions">
+          <button class="text-button" type="button" onclick="document.getElementById('worker-settings-<%= worker.id %>').showModal()">Routing</button>
+          <%= button_to "Rotate token", rotate_token_worker_path(worker), method: :post, class: "text-button", data: { turbo_confirm: "Rotate the token and reset this worker identity?" } %>
+          <%= button_to "Revoke", worker_path(worker), method: :delete, class: "text-button danger", data: { turbo_confirm: "Revoke this worker?" } %>
+        </div>
+        <dialog id="worker-settings-<%= worker.id %>" class="dialog">
+          <form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form>
+          <h2>Route to <%= worker.name %></h2>
+          <p>Set who operates this worker and which pools may route jobs to it.</p>
+          <%= form_with model: worker, class: "stack-form" do |form| %>
+            <label>Trust level<%= form.select :trust_tier, options_for_select(worker_trust_options, worker.trust_tier) %><small>Applications must explicitly allow this trust level.</small></label>
+            <% if @worker_pools.any? %>
+              <fieldset class="check-list"><legend>Pool membership</legend><%= form.collection_check_boxes :worker_pool_ids, @worker_pools, :id, :name do |box| %><label><%= box.check_box %><span><%= box.text %></span></label><% end %></fieldset>
+            <% end %>
+            <%= form.submit "Save routing", class: "button" %>
+          <% end %>
+        </dialog>
+      <% end %>
+    </article>
+  <% end %>
+  <% if @workers.empty? %><div class="empty-panel"><h2>No workers connected</h2><p>Issue a worker token and configure it beside your model.</p></div><% end %>
+</div>
+
+<dialog id="worker-form" class="dialog">
+  <form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form>
+  <h2>Issue worker token</h2>
+  <p>Name the runtime, set who operates it, and optionally assign routing pools.</p>
+  <%= form_with model: @worker, url: workers_path, class: "stack-form" do |form| %>
+    <label>Worker name<%= form.text_field :name, required: true, autofocus: true, placeholder: "Home model worker" %></label>
+    <label>Trust level<%= form.select :trust_tier, options_for_select(worker_trust_options, "owner") %></label>
+    <% if @worker_pools.any? %><fieldset class="check-list"><legend>Pool membership</legend><%= form.collection_check_boxes :worker_pool_ids, @worker_pools, :id, :name do |box| %><label><%= box.check_box %><span><%= box.text %></span></label><% end %></fieldset><% end %>
+    <%= form.submit "Issue token", class: "button" %>
+  <% end %>
+</dialog>
+
+<dialog id="pool-form" class="dialog">
+  <form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form>
+  <h2>Create worker pool</h2>
+  <p>Use pools for locations, hardware classes, teams, or provider groups.</p>
+  <%= form_with model: @worker_pool, url: worker_pools_path, class: "stack-form" do |form| %>
+    <label>Pool name<%= form.text_field :name, required: true, placeholder: "Private GPU" %></label>
+    <%= form.submit "Create pool", class: "button" %>
+  <% end %>
+</dialog>

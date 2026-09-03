@@ -3,6 +3,7 @@ class Organization < ApplicationRecord
   has_many :users, through: :memberships
   has_many :hub_applications, dependent: :destroy
   has_many :workers, dependent: :destroy
+  has_many :worker_pools, dependent: :destroy
   has_many :task_definitions, through: :hub_applications
   has_many :jobs, through: :hub_applications
 

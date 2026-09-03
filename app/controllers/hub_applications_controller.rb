@@ -1,6 +1,6 @@
 class HubApplicationsController < ApplicationController
   before_action :require_owner!, except: %i[index show]
-  before_action :set_application, only: %i[show rotate_token revoke]
+  before_action :set_application, only: %i[show update rotate_token revoke]
 
   def index
     @applications = current_organization.hub_applications.includes(:jobs, :task_definitions).order(:name)
@@ -9,6 +9,7 @@ class HubApplicationsController < ApplicationController
   def show
     @definitions = @application.task_definitions.order(key: :asc, version: :desc)
     @jobs = @application.jobs.includes(:task_definition, :worker).order(created_at: :desc).limit(20)
+    @worker_pools = current_organization.worker_pools.order(:name)
   end
 
   def new
@@ -30,6 +31,15 @@ class HubApplicationsController < ApplicationController
     redirect_to application_path(@application), notice: "Token rotated. The previous token no longer works."
   end
 
+  def update
+    if @application.update(routing_params)
+      redirect_to application_path(@application), notice: "Worker routing policy updated."
+    else
+      show
+      render :show, status: :unprocessable_entity
+    end
+  end
+
   def revoke
     @application.update!(active: false)
     redirect_to applications_path, notice: "Application revoked."
@@ -39,4 +49,5 @@ class HubApplicationsController < ApplicationController
 
   def set_application = @application = current_organization.hub_applications.find(params[:id])
   def application_params = params.require(:hub_application).permit(:name, :slug)
+  def routing_params = params.require(:hub_application).permit(:minimum_worker_trust, :worker_pool_id)
 end

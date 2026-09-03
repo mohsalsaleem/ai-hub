@@ -1,11 +1,22 @@
 class Worker < ApplicationRecord
   include TokenAuthenticatable
 
+  TRUST_TIERS = %w[external verified organization owner].freeze
+
   belongs_to :organization
   has_many :jobs, dependent: :nullify
   has_many :worker_request_nonces, dependent: :delete_all
+  has_many :worker_pool_memberships, dependent: :destroy
+  has_many :worker_pools, through: :worker_pool_memberships
 
   validates :name, presence: true
+  validates :trust_tier, inclusion: { in: TRUST_TIERS }
+
+  def trust_rank = TRUST_TIERS.index(trust_tier)
+
+  def meets_trust?(minimum)
+    trust_rank >= TRUST_TIERS.index(minimum.to_s)
+  end
 
   def enrolled? = public_key_pem.present? && key_fingerprint.present?
 

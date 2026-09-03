@@ -23,4 +23,17 @@ module ApplicationHelper
   def pretty_json(value)
     JSON.pretty_generate(value || {})
   end
+
+  def worker_trust_options
+    [
+      [ "Owner operated", "owner" ],
+      [ "Organization managed", "organization" ],
+      [ "Verified provider", "verified" ],
+      [ "External provider", "external" ]
+    ]
+  end
+
+  def worker_trust_label(value)
+    worker_trust_options.to_h.invert.fetch(value.to_s, value.to_s.humanize)
+  end
 end

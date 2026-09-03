@@ -10,19 +10,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_03_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_03_190000) do
   create_table "hub_applications", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
+    t.string "minimum_worker_trust", default: "owner", null: false
     t.string "name", null: false
     t.integer "organization_id", null: false
     t.string "slug", null: false
     t.string "token_digest", null: false
     t.string "token_hint"
     t.datetime "updated_at", null: false
+    t.integer "worker_pool_id"
     t.index ["organization_id", "slug"], name: "index_hub_applications_on_organization_id_and_slug", unique: true
     t.index ["organization_id"], name: "index_hub_applications_on_organization_id"
     t.index ["token_digest"], name: "index_hub_applications_on_token_digest", unique: true
+    t.index ["worker_pool_id"], name: "index_hub_applications_on_worker_pool_id"
   end
 
   create_table "jobs", force: :cascade do |t|
@@ -106,6 +109,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_180000) do
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
   end
 
+  create_table "worker_pool_memberships", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "worker_id", null: false
+    t.integer "worker_pool_id", null: false
+    t.index ["worker_id"], name: "index_worker_pool_memberships_on_worker_id"
+    t.index ["worker_pool_id", "worker_id"], name: "index_worker_pool_memberships_on_worker_pool_id_and_worker_id", unique: true
+    t.index ["worker_pool_id"], name: "index_worker_pool_memberships_on_worker_pool_id"
+  end
+
+  create_table "worker_pools", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.integer "organization_id", null: false
+    t.string "slug", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id", "slug"], name: "index_worker_pools_on_organization_id_and_slug", unique: true
+    t.index ["organization_id"], name: "index_worker_pools_on_organization_id"
+  end
+
   create_table "worker_request_nonces", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "expires_at", null: false
@@ -133,6 +156,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_180000) do
     t.string "reported_id"
     t.string "token_digest", null: false
     t.string "token_hint"
+    t.string "trust_tier", default: "owner", null: false
     t.datetime "updated_at", null: false
     t.string "version"
     t.index ["key_fingerprint"], name: "index_workers_on_key_fingerprint", unique: true
@@ -141,6 +165,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_180000) do
   end
 
   add_foreign_key "hub_applications", "organizations"
+  add_foreign_key "hub_applications", "worker_pools"
   add_foreign_key "jobs", "hub_applications"
   add_foreign_key "jobs", "task_definitions"
   add_foreign_key "jobs", "workers"
@@ -148,6 +173,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_180000) do
   add_foreign_key "memberships", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "task_definitions", "hub_applications"
+  add_foreign_key "worker_pool_memberships", "worker_pools"
+  add_foreign_key "worker_pool_memberships", "workers"
+  add_foreign_key "worker_pools", "organizations"
   add_foreign_key "worker_request_nonces", "workers"
   add_foreign_key "workers", "organizations"
 end

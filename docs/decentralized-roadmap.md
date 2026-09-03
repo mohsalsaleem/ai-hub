@@ -12,10 +12,11 @@ complex.
 - Per-device Ed25519 identity, signed requests, and replay prevention.
 - Tenant-scoped applications, definitions, jobs, tokens, and workers.
 - Owner-controlled identity reset and worker revocation.
+- Owner-assigned worker trust tiers and application routing policies.
+- Organization worker pools for explicit workload boundaries.
 
 ## Shared worker pools
 
-- Explicit worker pools and application routing policies.
 - Model, capability, privacy, and data-residency constraints.
 - Signed worker manifests and auditable identity events.
 - Routing based on owner-defined trust, not only advertised capabilities.
