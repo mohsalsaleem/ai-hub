@@ -2,7 +2,13 @@ Rails.application.routes.draw do
   resource :registration, only: %i[new create]
   resource :session, only: %i[new create destroy]
   resource :organization, only: %i[new create show update]
+  get "activity", to: "jobs#index", as: :activity
+  get "hosting", to: "workers#index", as: :hosting
+  get "settings", to: "organizations#show", as: :settings
   resources :applications, controller: "hub_applications", only: %i[index show new create update] do
+    get :task_definitions, on: :member
+    get :jobs, on: :member
+    get :settings, on: :member
     post :rotate_token, on: :member
     patch :revoke, on: :member
     resources :task_definitions, only: %i[new create]

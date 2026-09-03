@@ -1,6 +1,6 @@
 module ApplicationHelper
   def nav_link(label, path, section: nil)
-    active = section ? controller_name == section : current_page?(path)
+    active = section ? Array(section).include?(controller_name) : current_page?(path)
     link_to label, path, class: "nav-link#{' is-active' if active}"
   end
 

@@ -1,10 +1,10 @@
 # AI Hub
 
-AI Hub is an open-source, outbound-only execution platform connecting
-applications to private, shared, and eventually independently operated AI
-workers. Applications submit durable structured jobs to the Hub; a worker
-beside the model claims them over HTTPS and returns schema-validated results.
-The model machine never accepts an inbound internet connection.
+AI Hub is an open-source, outbound-only model inference platform connecting
+applications to private, shared, and eventually independently operated models.
+Applications submit durable structured jobs to the Hub; a worker beside the
+model claims them over HTTPS and returns schema-validated results. The model
+machine never accepts an inbound internet connection.
 
 This repository is an early `0.2.0-dev` implementation. It deliberately has no
 message broker, arbitrary code execution, tool calling, or hosted dependency.
@@ -215,6 +215,10 @@ possession but does not verify the operator or model.
 See [docs/protocol.md](docs/protocol.md) for lifecycle and API semantics.
 See [docs/worker-identity.md](docs/worker-identity.md) and
 [docs/threat-model.md](docs/threat-model.md) for worker trust boundaries.
+See [docs/product-direction.md](docs/product-direction.md) for the product
+model, console structure, provider participation, and phased delivery plan.
+Delivery status is tracked in
+[docs/implementation-progress.md](docs/implementation-progress.md).
 The path from private deployments to independently operated workers is in the
 [decentralized roadmap](docs/decentralized-roadmap.md).
 

@@ -1,9 +1,10 @@
-# Decentralized AI Hub roadmap
+# Shared model network roadmap
 
 AI Hub begins as a private control plane for applications and owner-operated
-workers. Its job protocol and worker boundary are designed to expand toward
-independently operated worker networks without making private deployments more
-complex.
+models. Its job protocol and worker boundary are designed to expand toward
+independently operated model capacity without making private deployments more
+complex. Workers perform model inference only. They do not execute arbitrary
+code or act as autonomous agents.
 
 ## Foundation
 
@@ -21,12 +22,15 @@ complex.
 - Model, capability, privacy, and data-residency constraints.
 - Signed worker manifests and auditable identity events.
 - Routing based on owner-defined trust, not only advertised capabilities.
+- Optional, timezone-aware provider participation schedules.
+- Consumers select pools without learning individual worker identities.
 
 ## Independent worker network
 
 - Provider profiles and independently operated worker enrollment.
 - Verifiable offers covering model, capacity, price, and policy.
-- Usage accounting, settlement, reputation, disputes, and abuse controls.
+- Usage accounting, provider rewards, platform fees, settlement, reputation,
+  disputes, and abuse controls.
 - Optional federation or peer discovery after the centralized protocol is proven.
 
 Cross-organization routing, payments, public discovery, hardware attestation,

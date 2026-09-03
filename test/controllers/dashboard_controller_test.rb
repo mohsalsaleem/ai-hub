@@ -6,6 +6,6 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     get dashboard_path
     assert_response :success
     assert_select "h1", "Overview"
-    assert_match(/Recent jobs/, response.body)
+    assert_match(/Recent runs/, response.body)
   end
 end

@@ -1,7 +1,7 @@
 <% content_for :title, "Applications · AI Hub" %>
 <% action = owner? ? link_to("New application", new_application_path, class: "button") : nil %>
 <%= render "shared/page_header", title: "Applications", description: "Registered applications and their API access", action: action %>
-<div class="table-wrap"><table><thead><tr><th>Application</th><th>Token</th><th>Status</th><th>Jobs</th><th>Definitions</th><th>Created</th></tr></thead><tbody>
+<div class="table-wrap"><table><thead><tr><th>Application</th><th>Token</th><th>Status</th><th>Runs</th><th>Definitions</th><th>Created</th></tr></thead><tbody>
   <% @applications.each do |application| %><tr><td><%= link_to application.name, application_path(application), class: "strong-link" %><div class="secondary"><%= application.slug %></div></td><td class="mono"><%= application.token_hint ? "#{application.token_hint}••••••••" : "Existing token" %></td><td><%= status_badge(application.active? ? "active" : "revoked") %></td><td><%= number_with_delimiter(application.jobs.size) %></td><td><%= application.task_definitions.size %></td><td><%= application.created_at.strftime("%b %Y") %></td></tr><% end %>
   <% if @applications.empty? %><tr><td colspan="6" class="empty-state">No applications yet. Create one to receive an API token.</td></tr><% end %>
 </tbody></table></div>

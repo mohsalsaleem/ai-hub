@@ -3,15 +3,15 @@ class WorkerPoolsController < ApplicationController
 
   def create
     current_organization.worker_pools.create!(worker_pool_params)
-    redirect_to workers_path, notice: "Worker pool created."
+    redirect_to hosting_path, notice: "Worker pool created."
   rescue ActiveRecord::RecordInvalid => e
-    redirect_to workers_path, alert: e.record.errors.full_messages.to_sentence
+    redirect_to hosting_path, alert: e.record.errors.full_messages.to_sentence
   end
 
   def destroy
     pool = current_organization.worker_pools.find(params[:id])
     pool.destroy!
-    redirect_to workers_path, notice: "Worker pool removed. Applications using it now allow any eligible worker."
+    redirect_to hosting_path, notice: "Worker pool removed. Applications using it now allow any eligible worker."
   end
 
   private

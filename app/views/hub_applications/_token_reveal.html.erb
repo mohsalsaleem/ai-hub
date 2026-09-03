@@ -1,0 +1,8 @@
+<% if flash[:issued_token] %>
+  <section class="token-reveal">
+    <span class="overline">Shown once</span>
+    <h2>Copy your application token</h2>
+    <div class="token-value"><code><%= flash[:issued_token] %></code></div>
+    <p>Store it securely. AI Hub cannot show it again.</p>
+  </section>
+<% end %>

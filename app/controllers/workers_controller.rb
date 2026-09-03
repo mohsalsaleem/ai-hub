@@ -1,5 +1,5 @@
 class WorkersController < ApplicationController
-  before_action :require_owner!, except: :index
+  before_action :require_owner!
   before_action :set_worker, only: %i[update destroy rotate_token]
 
   def index
@@ -18,7 +18,7 @@ class WorkersController < ApplicationController
       [ issued_worker, issued_token ]
     end
     flash[:issued_token] = token
-    redirect_to workers_path(anchor: "issued-token"), notice: "Worker token issued. Copy it now."
+    redirect_to hosting_path(anchor: "issued-token"), notice: "Worker token issued. Copy it now."
   end
 
   def update
@@ -29,19 +29,19 @@ class WorkersController < ApplicationController
     if previous_pool_ids != @worker.worker_pool_ids.sort
       @worker.record_identity_event!("pools_changed", pool_ids: @worker.worker_pool_ids.sort)
     end
-    redirect_to workers_path(anchor: "worker-#{@worker.id}"), notice: "Worker routing settings updated."
+    redirect_to hosting_path(anchor: "worker-#{@worker.id}"), notice: "Worker routing settings updated."
   end
 
   def rotate_token
     flash[:issued_token] = @worker.rotate_token!
-    redirect_to workers_path(anchor: "issued-token"), notice: "Worker token rotated."
+    redirect_to hosting_path(anchor: "issued-token"), notice: "Worker token rotated."
   end
 
   def destroy
     @worker.update!(active: false)
     @worker.worker_enrollment_grants.active.update_all(revoked_at: Time.current, updated_at: Time.current)
     @worker.record_identity_event!("revoked")
-    redirect_to workers_path, notice: "Worker revoked."
+    redirect_to hosting_path, notice: "Worker revoked."
   end
 
   private

@@ -1,7 +1,26 @@
 <% content_for :title, "#{@application.name} · AI Hub" %>
-<div class="page-header"><div><%= link_to "← Applications", applications_path, class: "back-link" %><h1><%= @application.name %></h1><p><span class="mono"><%= @application.slug %></span> · <%= @application.active? ? "Accepting API requests" : "Revoked" %></p></div><%= status_badge(@application.active? ? "active" : "revoked") %></div>
-<% if flash[:issued_token] %><section class="token-reveal"><span class="overline">Shown once</span><h2>Copy your application token</h2><div class="token-value"><code><%= flash[:issued_token] %></code></div><p>Store it securely. AI Hub cannot show it again.</p></section><% end %>
-<div class="action-row"><% if owner? && @application.active? %><%= button_to "Rotate token", rotate_token_application_path(@application), method: :post, class: "button button-secondary", data: { turbo_confirm: "Rotate this token? The current token will stop working immediately." } %><%= button_to "Revoke application", revoke_application_path(@application), method: :patch, class: "button button-danger", data: { turbo_confirm: "Revoke this application?" } %><% end %><% if owner? %><%= link_to "Publish task definition", new_application_task_definition_path(@application), class: "button" %><%= link_to "Add OpenAI model", new_application_task_definition_path(@application, executor: "chat_completion"), class: "button button-secondary" %><% end %></div>
-<section class="section-block panel routing-policy"><div class="section-head"><div><span class="overline">Worker routing</span><h2>Trust policy</h2></div><span class="chip"><%= worker_trust_label(@application.minimum_worker_trust) %></span></div><p class="secondary">Jobs may run on <%= @application.worker_pool ? @application.worker_pool.name : "any organization pool" %> when the worker meets this minimum trust level.</p><% if owner? %><%= form_with model: @application, url: application_path(@application), class: "routing-form" do |form| %><label>Minimum trust<%= form.select :minimum_worker_trust, options_for_select(worker_trust_options, @application.minimum_worker_trust) %></label><label>Worker pool<%= form.collection_select :worker_pool_id, @worker_pools, :id, :name, { include_blank: "Any eligible worker" } %></label><%= form.submit "Save policy", class: "button button-small" %><% end %></section><% end %>
-<section class="section-block"><div class="section-head"><h2>Task definitions</h2></div><div class="table-wrap"><table><thead><tr><th>Reference</th><th>Executor</th><th>Digest</th><th>Published</th></tr></thead><tbody><% @definitions.each do |definition| %><tr><td><%= link_to definition.reference, task_definition_path(definition), class: "mono-link" %></td><td><%= definition.executor.humanize %></td><td class="mono"><%= definition.digest.first(12) %></td><td><%= time_ago_in_words(definition.created_at) %> ago</td></tr><% end %><% if @definitions.empty? %><tr><td colspan="4" class="empty-state">No task definitions published.</td></tr><% end %></tbody></table></div></section>
-<section class="section-block"><div class="section-head"><h2>Recent jobs</h2></div><%= render "jobs/table", jobs: @jobs %></section>
+<%= render "header", application: @application %>
+<%= render "token_reveal" %>
+
+<div class="metric-grid application-metrics">
+  <%= link_to task_definitions_application_path(@application), class: "metric-card metric-link" do %>
+    <span>Task definitions</span>
+    <strong><%= @application.task_definitions.count %></strong>
+    <small>Published for this application</small>
+  <% end %>
+  <%= link_to jobs_application_path(@application), class: "metric-card metric-link" do %>
+    <span>Runs</span>
+    <strong><%= @application.jobs.count %></strong>
+    <small>Model requests from this application</small>
+  <% end %>
+  <%= link_to settings_application_path(@application), class: "metric-card metric-link" do %>
+    <span>Routing</span>
+    <strong class="metric-text"><%= @application.worker_pool&.name || "Automatic" %></strong>
+    <small>Review pool selection and access</small>
+  <% end %>
+</div>
+
+<section class="section-block">
+  <div class="section-head"><h2>Recent runs</h2><%= link_to "View all", jobs_application_path(@application), class: "quiet-link" %></div>
+  <%= render "jobs/table", jobs: @recent_jobs %>
+</section>

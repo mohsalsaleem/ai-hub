@@ -1,0 +1,7 @@
+<% content_for :title, "Runs · #{@application.name} · AI Hub" %>
+<%= render "header", application: @application %>
+
+<section class="section-block section-block-first">
+  <div class="section-head"><div><span class="overline">Application activity</span><h2>Runs</h2></div><span class="secondary">Latest 100</span></div>
+  <%= render "jobs/table", jobs: @jobs %>
+</section>

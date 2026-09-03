@@ -23,7 +23,7 @@ class OrganizationsController < ApplicationController
 
   def update
     if current_organization.update(organization_params)
-      redirect_to organization_path, notice: "Organization updated."
+      redirect_to settings_path, notice: "Organization updated."
     else
       show
       render :show, status: :unprocessable_entity

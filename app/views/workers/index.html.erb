@@ -1,9 +1,9 @@
-<% content_for :title, "Workers · AI Hub" %>
+<% content_for :title, "Hosting · AI Hub" %>
 <% action = owner? ? capture do %>
   <button class="button button-secondary" type="button" onclick="document.getElementById('pool-form').showModal()">New pool</button>
   <button class="button" type="button" onclick="document.getElementById('worker-form').showModal()">Issue worker token</button>
 <% end : nil %>
-<%= render "shared/page_header", title: "Workers", description: "Connected model workers, trust and routing pools", action: action %>
+<%= render "shared/page_header", title: "Hosting", description: "Workers and model capacity provided by #{current_organization.name}", action: action %>
 
 <% if flash[:issued_token] %>
   <section class="token-reveal" id="issued-token">
@@ -16,7 +16,7 @@
 
 <% if @worker_pools.any? %>
   <section class="pool-strip" aria-label="Worker pools">
-    <div><span class="overline">Routing pools</span><p>Applications can limit jobs to one pool.</p></div>
+    <div><span class="overline">Worker pools</span><p>Applications can route runs through one pool.</p></div>
     <div class="pool-list">
       <% @worker_pools.each do |pool| %>
         <span class="pool-pill"><%= pool.name %><small><%= pool.workers.count %></small><% if owner? %><%= button_to "×", worker_pool_path(pool), method: :delete, aria: { label: "Remove #{pool.name}" }, data: { turbo_confirm: "Remove this pool? Applications using it will allow any eligible worker." } %><% end %></span>
@@ -32,7 +32,7 @@
         <div><span class="status-dot <%= worker.online? ? 'is-online' : 'is-offline' %>"></span><h2><%= worker.name %></h2></div>
         <%= status_badge(worker.online? ? "online" : "offline") %>
       </div>
-      <div class="worker-meta"><span><%= worker.version || "Version unknown" %></span><span><%= number_with_delimiter(worker.jobs.count) %> jobs</span></div>
+      <div class="worker-meta"><span><%= worker.version || "Version unknown" %></span><span><%= number_with_delimiter(worker.jobs.count) %> runs served</span></div>
       <div class="chip-row">
         <span class="chip"><%= worker_trust_label(worker.trust_tier) %></span>
         <span class="chip"><%= worker.enrolled? ? "Signed identity" : "Token identity" %></span>
@@ -51,7 +51,7 @@
         <dialog id="worker-settings-<%= worker.id %>" class="dialog">
           <form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form>
           <h2>Route to <%= worker.name %></h2>
-          <p>Set who operates this worker and which pools may route jobs to it.</p>
+          <p>Set who operates this worker and which pools may route runs to it.</p>
           <%= form_with model: worker, class: "stack-form" do |form| %>
             <label>Trust level<%= form.select :trust_tier, options_for_select(worker_trust_options, worker.trust_tier) %><small>Applications must explicitly allow this trust level.</small></label>
             <% if @worker_pools.any? %>

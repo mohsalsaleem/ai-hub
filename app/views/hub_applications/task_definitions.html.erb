@@ -1,0 +1,10 @@
+<% content_for :title, "Task definitions · #{@application.name} · AI Hub" %>
+<%= render "header", application: @application %>
+
+<section class="section-block section-block-first">
+  <div class="section-head">
+    <div><span class="overline">Application resources</span><h2>Task definitions</h2></div>
+    <% if owner? %><div class="button-row"><%= link_to "Publish definition", new_application_task_definition_path(@application), class: "button" %><%= link_to "Add OpenAI model", new_application_task_definition_path(@application, executor: "chat_completion"), class: "button button-secondary" %></div><% end %>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>Reference</th><th>Executor</th><th>Digest</th><th>Published</th></tr></thead><tbody><% @definitions.each do |definition| %><tr><td><%= link_to definition.reference, task_definition_path(definition), class: "mono-link" %></td><td><%= definition.executor.humanize %></td><td class="mono"><%= definition.digest.first(12) %></td><td><%= time_ago_in_words(definition.created_at) %> ago</td></tr><% end %><% if @definitions.empty? %><tr><td colspan="4" class="empty-state">No task definitions published.</td></tr><% end %></tbody></table></div>
+</section>

@@ -1,0 +1,14 @@
+<div class="page-header">
+  <div>
+    <%= link_to "← Applications", applications_path, class: "back-link" %>
+    <h1><%= application.name %></h1>
+    <p><span class="mono"><%= application.slug %></span> · <%= application.active? ? "Accepting API requests" : "Revoked" %></p>
+  </div>
+  <%= status_badge(application.active? ? "active" : "revoked") %>
+</div>
+<nav class="section-tabs" aria-label="Application sections">
+  <%= link_to "Overview", application_path(application), class: current_page?(application_path(application)) ? "is-active" : nil %>
+  <%= link_to "Task definitions", task_definitions_application_path(application), class: current_page?(task_definitions_application_path(application)) ? "is-active" : nil %>
+  <%= link_to "Runs", jobs_application_path(application), class: current_page?(jobs_application_path(application)) ? "is-active" : nil %>
+  <%= link_to "Settings", settings_application_path(application), class: current_page?(settings_application_path(application)) ? "is-active" : nil %>
+</nav>

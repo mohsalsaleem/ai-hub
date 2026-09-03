@@ -1,4 +1,4 @@
-<div class="table-wrap"><table><thead><tr><th>Job</th><th>Task</th><th>Status</th><th>Worker</th><th>Submitted</th><th>Duration</th></tr></thead><tbody>
-  <% jobs.each do |job| %><tr><td><%= link_to job.public_id, job_path(job.public_id), class: "mono-link" %></td><td><strong><%= job.task_definition.key %></strong> <span class="secondary">v<%= job.task_definition.version %></span></td><td><%= status_badge(job.status == "leased" ? "running" : job.status) %></td><td><%= job.worker&.name || "Unassigned" %></td><td><%= time_ago_in_words(job.created_at) %> ago</td><td><%= job.completed_at ? distance_of_time_in_words(job.created_at, job.completed_at) : "Pending" %></td></tr><% end %>
-  <% if jobs.empty? %><tr><td colspan="6" class="empty-state">No jobs match this view.</td></tr><% end %>
+<div class="table-wrap"><table><thead><tr><th>Run</th><th>Task</th><th>Status</th><th>Submitted</th><th>Duration</th></tr></thead><tbody>
+  <% jobs.each do |job| %><tr><td><%= link_to job.public_id, job_path(job.public_id), class: "mono-link" %></td><td><strong><%= job.task_definition.key %></strong> <span class="secondary">v<%= job.task_definition.version %></span></td><td><%= status_badge(job.status == "leased" ? "running" : job.status) %></td><td><%= time_ago_in_words(job.created_at) %> ago</td><td><%= job.completed_at ? distance_of_time_in_words(job.created_at, job.completed_at) : "Pending" %></td></tr><% end %>
+  <% if jobs.empty? %><tr><td colspan="5" class="empty-state">No runs match this view.</td></tr><% end %>
 </tbody></table></div>
