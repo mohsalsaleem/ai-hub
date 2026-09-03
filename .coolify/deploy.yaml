@@ -1,0 +1,44 @@
+version: 1
+
+application:
+  name: AI Hub
+  build:
+    type: dockerfile
+    dockerfile: Dockerfile
+  healthcheck:
+    path: /up
+
+environments:
+  production:
+    branch: main
+    domain: https://aihub.mohsal.dev
+    coolify_application_uuid: ""
+    replicas: 1
+    database:
+      engine: sqlite
+      volume: ai-hub-production-storage
+      mount_path: /rails/storage
+      files:
+        - /rails/storage/production.sqlite3
+        - /rails/storage/production_cache.sqlite3
+        - /rails/storage/production_queue.sqlite3
+      backup:
+        required: true
+        frequency: "0 2 * * *"
+        retention_days: 14
+        restore_tested: false
+    uploads:
+      strategy: none
+    migration:
+      command: bin/rails db:prepare
+      timing: container_start
+    required_secrets:
+      - RAILS_MASTER_KEY
+      - AI_HUB_ADMIN_PASSWORD
+    rollback:
+      strategy: previous_healthy_deployment
+
+promotion:
+  from: main
+  to: main
+  require_human_approval: true

@@ -52,6 +52,33 @@ Worker API:
 - `POST /api/v1/worker/jobs/:id/fail`
 - `POST /api/v1/worker/metrics`
 
+## Receiving job results
+
+`POST /api/v1/jobs` returns the durable job resource. Applications retain its
+`id` and poll `GET /api/v1/jobs/:id` using their application bearer token.
+Applications can only read their own jobs.
+
+```json
+{
+  "id": "01J...",
+  "status": "completed",
+  "task": "example.summarize@1",
+  "attempts": 1,
+  "output": { "summary": "..." },
+  "error": null,
+  "created_at": "2026-09-03T10:00:00Z",
+  "completed_at": "2026-09-03T10:00:04Z"
+}
+```
+
+`queued` and `leased` are non-terminal. `completed`, `failed`, and `dead` are
+terminal. `output` is present after successful completion; unsuccessful jobs
+use `error`.
+
+Version 0.1 does not deliver webhooks or callbacks. Applications must poll the
+status endpoint. A future signed-webhook delivery layer may provide faster
+notification, but this endpoint will remain the authoritative fallback.
+
 ## Delivery guarantees
 
 The protocol provides at-least-once execution and idempotent job completion.

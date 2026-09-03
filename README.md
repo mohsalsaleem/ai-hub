@@ -69,7 +69,22 @@ curl -X POST http://127.0.0.1:3000/api/v1/jobs \
     "input":{"text":"AI Hub connects applications to a private model."}}'
 ```
 
-Read the returned job URL with `GET /api/v1/jobs/:id` until it is complete.
+The create response includes the job ID and current status. Poll
+`GET /api/v1/jobs/:id` with the same application token until it reaches a
+terminal status:
+
+```bash
+curl http://127.0.0.1:3000/api/v1/jobs/JOB_ID \
+  -H 'Authorization: Bearer aih_...'
+```
+
+`completed` responses include the schema-validated `output`. `failed` and
+`dead` responses include `error`. Applications should persist the Hub job ID
+and apply a result idempotently because worker execution is at least once.
+
+AI Hub 0.1 does not push callbacks or webhooks. Polling is currently the only
+application notification mechanism. Signed, retryable webhooks are planned;
+the status endpoint will remain the recovery path after they are introduced.
 
 ## Safety and limits
 
@@ -96,7 +111,18 @@ bin/brakeman --no-pager
 
 ## Deployment
 
-Deployment packaging is intentionally deferred. The first production release
-will use one Rails instance with `storage/` on a persistent volume. PostgreSQL
-becomes the upgrade path when multiple Hub instances or sustained concurrent
-writes are required.
+Production desired state is recorded in `.coolify/deploy.yaml`. The initial
+deployment runs one Rails instance and mounts a named persistent volume at
+`/rails/storage`; do not add replicas while SQLite is in use. Container startup
+runs `bin/rails db:prepare`, and `/up` is the health check.
+
+Coolify must provide `RAILS_MASTER_KEY` and `AI_HUB_ADMIN_PASSWORD` as secrets.
+The SQLite volume is backed up daily with 14-day retention. To restore, stop
+the application, restore the complete storage-volume snapshot, then start the
+same known-good release and verify `/up` plus an authenticated job read. Record
+the restore date in `.coolify/deploy.yaml` before marking `restore_tested` true.
+
+Roll back application code to the previous healthy Coolify deployment. A code
+rollback does not roll back SQLite; restore the volume only when data itself is
+damaged. PostgreSQL becomes the upgrade path when multiple Hub instances or
+sustained concurrent writes are required.
