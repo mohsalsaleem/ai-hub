@@ -64,6 +64,8 @@ the plist and repository contain no credential.
 `worker/update-from-main` is safe to run daily from cron. It refuses to update
 a non-`main` or dirty checkout, fast-forwards from `origin/main`, installs any
 changed bundle dependencies, and restarts the LaunchAgent only after an update.
+The current macOS host schedules it at 04:45 using
+`worker/com.mohsal.ai-hub-worker-update.plist`.
 
 Open `http://127.0.0.1:3000` for job, worker, and task health.
 
