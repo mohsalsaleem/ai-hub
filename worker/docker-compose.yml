@@ -1,9 +1,20 @@
+name: ai-hub-worker
+
 services:
   worker:
     build: .
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
     environment:
+      AI_HUB_URL: ${AI_HUB_URL:-https://aihub.mohsal.dev}
+      AI_HUB_WORKER_TOKEN: ${AI_HUB_WORKER_TOKEN:?set AI_HUB_WORKER_TOKEN or create worker/.env}
+      AI_HUB_WORKER_ID: ${AI_HUB_WORKER_ID:-home-worker}
       AI_HUB_STATE_PATH: /state
+      AI_HUB_POLL_WAIT: ${AI_HUB_POLL_WAIT:-20}
+      AI_MODEL_URL: ${AI_MODEL_URL:-http://host.docker.internal:8080/v1}
+      AI_MODEL: ${AI_MODEL:-qwen3.5-9b}
+      AI_MODEL_API_KEY: ${AI_MODEL_API_KEY:-local}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
