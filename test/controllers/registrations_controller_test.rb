@@ -7,7 +7,7 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
         password: "long-enough", organization_name: "New Company" } }
     end
 
-    assert_redirected_to root_path
+    assert_redirected_to dashboard_path
     user = User.find_by!(email_address: "new@example.com")
     assert_equal "New Company", user.organizations.sole.name
     assert user.memberships.sole.owner?

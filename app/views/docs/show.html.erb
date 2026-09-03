@@ -1,0 +1,50 @@
+<% content_for :title, "Documentation · AI Hub" %>
+<% content_for :public_page, true %>
+<div class="public-site docs-site">
+  <%= render "shared/public_header" %>
+  <div class="docs-layout">
+    <aside class="docs-nav" aria-label="Documentation sections">
+      <span class="overline">Documentation</span>
+      <a href="#overview">Overview</a><a href="#quickstart">Quickstart</a><a href="#model-profile">Model profiles</a><a href="#openai-api">OpenAI-compatible API</a><a href="#background">Background responses</a><a href="#native-api">Native job API</a><a href="#limits">Limits</a>
+    </aside>
+    <main class="docs-content">
+      <section id="overview"><span class="eyebrow">AI Hub docs</span><h1>Connect applications to private models.</h1><p class="docs-lead">AI Hub is a self-hosted control plane with an outbound-only worker. Applications receive scoped tokens and can use either familiar OpenAI endpoints or durable structured jobs.</p></section>
+
+      <section id="quickstart"><h2>Quickstart</h2><p>Create an account, then create an application in the console. Copy its token when it is shown—the plaintext value is never stored by AI Hub.</p><ol><li>Create an application.</li><li>Add an OpenAI model profile or publish a structured task definition.</li><li>Issue a worker token from the Workers screen.</li><li>Start a worker beside your OpenAI-compatible local model.</li></ol><pre><code>AI_HUB_URL=https://your-hub.example \
+AI_HUB_WORKER_TOKEN=aih_... \
+AI_MODEL_URL=http://127.0.0.1:8080/v1 \
+AI_MODEL=local-model \
+bundle exec ruby worker/worker.rb</code></pre></section>
+
+      <section id="model-profile"><h2>Model profiles</h2><p>A model profile is an immutable <code>chat_completion</code> task definition. Its key and version become the public model ID, such as <code>assistant.general@1</code>. The profile controls system instructions; the worker’s <code>AI_MODEL</code> selects the actual inference model.</p><div class="docs-callout"><strong>Version deliberately.</strong><span>Publish version 2 when instructions change. Existing requests and audit history continue to reference version 1.</span></div></section>
+
+      <section id="openai-api"><h2>OpenAI-compatible API</h2><p>Use the application token as the API key and append <code>/v1</code> to the hub origin.</p><pre><code>from openai import OpenAI
+
+client = OpenAI(
+    api_key="aih_...",
+    base_url="https://your-hub.example/v1",
+)
+
+response = client.responses.create(
+    model="assistant.general@1",
+    input="Summarize this report",
+)
+print(response.output_text)</code></pre><h3>Available endpoints</h3><div class="endpoint-list"><div><code>GET</code><span>/v1/models</span><small>List model profiles</small></div><div><code>POST</code><span>/v1/responses</span><small>Create a response</small></div><div><code>GET</code><span>/v1/responses/:id</span><small>Retrieve a response</small></div><div><code>POST</code><span>/v1/chat/completions</span><small>Create a chat completion</small></div></div></section>
+
+      <section id="background"><h2>Background responses</h2><p>Set <code>background: true</code> for work that may outlive an HTTP request. The create call returns a durable job ID immediately.</p><pre><code>curl -X POST https://your-hub.example/v1/responses \
+  -H 'Authorization: Bearer aih_...' \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"assistant.general@1","input":"Write a brief","background":true}'
+
+curl https://your-hub.example/v1/responses/job_... \
+  -H 'Authorization: Bearer aih_...'</code></pre><p>Synchronous requests wait up to <code>AI_HUB_OPENAI_SYNC_TIMEOUT</code> seconds. Worker claims are long polls, so their configured duration does not become job pickup latency.</p></section>
+
+      <section id="native-api"><h2>Native job API</h2><p>Use native jobs when you need schema-validated structured output. First register an immutable definition, then submit its reference with an idempotency key.</p><pre><code>POST /api/v1/task_definitions
+POST /api/v1/jobs
+GET  /api/v1/jobs/:id</code></pre><p>Workers advertise executor capabilities and claim only compatible jobs inside their organization. The worker never contains application-specific business logic.</p></section>
+
+      <section id="limits"><h2>Current limits</h2><ul><li>Text inputs and outputs only for OpenAI-compatible endpoints.</li><li>No streaming, tools, images, files, audio, or embeddings yet.</li><li>Job payloads and results are limited to 256 KiB.</li><li>SQLite deployments must run one Hub replica on durable storage.</li><li>Use HTTPS and keep application and worker tokens in a secret manager.</li></ul><p>For the complete wire contract, operational behavior, and examples, see the project’s <%= link_to "integration guide", "https://github.com/mohsalsaleem/ai-hub/blob/main/docs/openai-compatibility.md" %> and <%= link_to "protocol reference", "https://github.com/mohsalsaleem/ai-hub/blob/main/docs/protocol.md" %>.</p></section>
+    </main>
+  </div>
+  <footer class="site-footer"><span>AI Hub</span><span>Documentation for the current 0.2 development release.</span><%= link_to "GitHub", "https://github.com/mohsalsaleem/ai-hub" %></footer>
+</div>

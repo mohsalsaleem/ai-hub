@@ -16,7 +16,7 @@ class RegistrationsController < ApplicationController
     end
     start_new_session_for(@user)
     session[:organization_id] = organization.id
-    redirect_to root_path, notice: "Welcome to AI Hub. Create your first application to get started."
+    redirect_to dashboard_path, notice: "Welcome to AI Hub. Create your first application to get started."
   rescue ActiveRecord::RecordInvalid => e
     @user.errors.add(:base, e.record.errors.full_messages.to_sentence) unless e.record == @user
     render :new, status: :unprocessable_entity

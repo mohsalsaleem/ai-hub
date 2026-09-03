@@ -12,13 +12,15 @@ Rails.application.routes.draw do
   resources :workers, only: %i[index create destroy] do
     post :rotate_token, on: :member
   end
+  get "dashboard", to: "dashboard#show", as: :dashboard
+  get "docs", to: "docs#show", as: :docs
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
-  root "dashboard#show"
+  root "landing#show"
 
   namespace :api do
     namespace :v1 do

@@ -78,7 +78,9 @@ changed bundle dependencies, and restarts the LaunchAgent only after an update.
 The current macOS host schedules it at 04:45 using
 `worker/com.mohsal.ai-hub-worker-update.plist`.
 
-Open `http://127.0.0.1:3000` for the tenant-scoped operations console.
+Open `http://127.0.0.1:3000` for the public product page,
+`http://127.0.0.1:3000/docs` for the browsable integration guide, and
+`http://127.0.0.1:3000/dashboard` for the authenticated operations console.
 
 ## First job
 

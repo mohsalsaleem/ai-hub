@@ -12,7 +12,7 @@ class OrganizationsController < ApplicationController
       @organization.memberships.create!(user: current_user, role: "owner")
     end
     session[:organization_id] = @organization.id
-    redirect_to root_path, notice: "Organization created."
+    redirect_to dashboard_path, notice: "Organization created."
   rescue ActiveRecord::RecordInvalid
     render :new, status: :unprocessable_entity
   end

@@ -27,6 +27,6 @@ class ApplicationController < ActionController::Base
   end
 
   def require_owner!
-    redirect_to root_path, alert: "Organization owner access is required." unless owner?
+    redirect_to dashboard_path, alert: "Organization owner access is required." unless owner?
   end
 end

@@ -9,17 +9,20 @@
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
   </head>
   <body>
-    <% if authenticated? && current_organization %>
+    <% if content_for?(:public_page) %>
+      <%= yield %>
+    <% elsif authenticated? && current_organization %>
       <div class="app-frame">
         <aside class="sidebar">
           <div class="brand"><span>AI Hub</span></div>
           <div class="org-block"><span class="overline">Organization</span><strong><%= current_organization.name %></strong><span><%= owner? ? "Owner" : "Member" %></span></div>
           <nav class="nav-stack" aria-label="Main navigation">
-            <%= nav_link "Overview", root_path %>
+            <%= nav_link "Overview", dashboard_path %>
             <%= nav_link "Applications", applications_path, section: "hub_applications" %>
             <%= nav_link "Task definitions", task_definitions_path, section: "task_definitions" %>
             <%= nav_link "Jobs", jobs_path, section: "jobs" %>
             <%= nav_link "Workers", workers_path, section: "workers" %>
+            <%= nav_link "Docs", docs_path, section: "docs" %>
             <%= nav_link "Organization settings", organization_path, section: "organizations" %>
           </nav>
           <div class="account-block">

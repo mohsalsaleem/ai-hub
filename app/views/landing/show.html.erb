@@ -1,0 +1,62 @@
+<% content_for :title, "AI Hub · Private models, shared safely" %>
+<% content_for :public_page, true %>
+<div class="public-site">
+  <%= render "shared/public_header" %>
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">Your models. One dependable API.</span>
+        <h1>Run private AI like a shared service.</h1>
+        <p>AI Hub connects your applications to models running on machines you control. Durable jobs, isolated tenants, and outbound-only workers—without exposing your model host.</p>
+        <div class="hero-actions">
+          <%= link_to "Create your hub", new_registration_path, class: "button button-large" %>
+          <%= link_to "Read the docs", docs_path, class: "button button-secondary button-large" %>
+        </div>
+        <p class="hero-note"><span class="status-dot is-online"></span> Self-hosted Rails control plane · OpenAI-compatible API</p>
+      </div>
+      <div class="terminal-card" aria-label="AI Hub request example">
+        <div class="terminal-head"><span></span><span></span><span></span><code>request.py</code></div>
+        <pre><code>import os
+from openai import OpenAI
+
+<span class="code-muted"># Point an existing client at your hub</span>
+client = OpenAI(
+    api_key=os.environ["AI_HUB_TOKEN"],
+    base_url="https://your-hub.example/v1",
+)
+
+response = client.responses.create(
+    model="assistant.general@1",
+    input="Summarize this report",
+)
+
+response.output_text</code></pre>
+        <div class="terminal-result"><span class="status-dot is-online"></span><span>Completed by local-worker</span><strong>2.4s</strong></div>
+      </div>
+    </section>
+
+    <section class="trust-strip" aria-label="Core properties"><span>Outbound-only workers</span><span>Durable SQLite queue</span><span>Tenant isolation</span><span>Schema validation</span></section>
+
+    <section class="public-section">
+      <div class="section-intro"><span class="eyebrow">Small infrastructure</span><h2>A control plane, not another platform dependency.</h2><p>Applications submit work over HTTPS. Workers beside your models keep an outbound long poll open, claim compatible jobs, and return validated results.</p></div>
+      <div class="flow-diagram" aria-label="AI Hub architecture">
+        <div class="flow-node"><span>01</span><strong>Applications</strong><small>Submit familiar API requests</small></div><i>→</i>
+        <div class="flow-node flow-node-accent"><span>02</span><strong>AI Hub</strong><small>Authenticate, queue, lease</small></div><i>←</i>
+        <div class="flow-node"><span>03</span><strong>Local workers</strong><small>Call private models</small></div>
+      </div>
+    </section>
+
+    <section class="feature-grid public-section">
+      <article><span class="feature-index">01</span><h3>OpenAI-compatible</h3><p>Use Responses or Chat Completions with your application token and a custom base URL.</p></article>
+      <article><span class="feature-index">02</span><h3>Durable by default</h3><p>Leases, retries, idempotency, and a local result outbox protect work across network interruptions.</p></article>
+      <article><span class="feature-index">03</span><h3>Definitions travel</h3><p>Applications publish immutable instructions and schemas. Generic workers fetch exactly what each job needs.</p></article>
+      <article><span class="feature-index">04</span><h3>Operations included</h3><p>Inspect jobs, worker health, applications, tokens, and task versions from one tenant-scoped console.</p></article>
+    </section>
+
+    <section class="cta-panel">
+      <div><span class="eyebrow">Start locally</span><h2>Connect the model you already run.</h2><p>One Rails app, one durable volume, and a lightweight worker beside your model.</p></div>
+      <%= link_to "View integration guide", docs_path(anchor: "quickstart"), class: "button button-large" %>
+    </section>
+  </main>
+  <footer class="site-footer"><span>AI Hub</span><span>Private AI infrastructure, kept understandable.</span><%= link_to "GitHub", "https://github.com/mohsalsaleem/ai-hub" %></footer>
+</div>
