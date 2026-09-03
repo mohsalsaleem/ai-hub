@@ -5,7 +5,8 @@ class JobClaimer
 
   def claim
     Job.transaction do
-      job = Job.claimable.includes(:task_definition).order(priority: :desc, created_at: :asc).limit(50)
+      job = @worker.organization.jobs.merge(Job.claimable).includes(:task_definition)
+        .order(priority: :desc, created_at: :asc).limit(50)
         .find { |candidate| compatible?(candidate.task_definition) }
       return unless job
 

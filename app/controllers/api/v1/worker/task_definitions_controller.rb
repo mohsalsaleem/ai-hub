@@ -3,7 +3,7 @@ module Api
     module Worker
       class TaskDefinitionsController < BaseController
         def show
-          definition = TaskDefinition.find_by!(digest: params[:digest], active: true)
+          definition = current_worker.organization.task_definitions.find_by!(digest: params[:digest], active: true)
           render json: {
             key: definition.key, version: definition.version, digest: definition.digest,
             executor: definition.executor, instructions: definition.instructions,

@@ -2,9 +2,12 @@ namespace :hub do
   desc "Create an application and worker, printing each token once"
   task bootstrap: :environment do
     app_name = ENV.fetch("APP_NAME", "Example application")
+    organization = Organization.find_or_create_by!(slug: ENV.fetch("ORG_SLUG", app_name.parameterize)) do |record|
+      record.name = ENV.fetch("ORG_NAME", app_name)
+    end
     application, application_token = HubApplication.issue!(name: app_name,
-      slug: ENV.fetch("APP_SLUG", app_name.parameterize))
-    worker, worker_token = Worker.issue!(name: ENV.fetch("WORKER_NAME", "Local worker"))
+      slug: ENV.fetch("APP_SLUG", app_name.parameterize), organization:)
+    worker, worker_token = Worker.issue!(name: ENV.fetch("WORKER_NAME", "Local worker"), organization:)
     puts "Application: #{application.name}"
     puts "AI_HUB_APPLICATION_TOKEN=#{application_token}"
     puts "Worker: #{worker.name}"
@@ -19,7 +22,10 @@ namespace :hub do
     raise "AI_HUB_APPLICATION_TOKEN must be a generated AI Hub token" unless application_token.match?(token_pattern)
     raise "AI_HUB_WORKER_TOKEN must be a generated AI Hub token" unless worker_token.match?(token_pattern)
 
-    application = HubApplication.find_or_initialize_by(slug: ENV.fetch("APP_SLUG"))
+    organization = Organization.find_or_create_by!(slug: ENV.fetch("ORG_SLUG", ENV.fetch("APP_SLUG"))) do |record|
+      record.name = ENV.fetch("ORG_NAME", ENV.fetch("APP_NAME"))
+    end
+    application = organization.hub_applications.find_or_initialize_by(slug: ENV.fetch("APP_SLUG"))
     application.assign_attributes(
       name: ENV.fetch("APP_NAME"),
       token_digest: HubApplication.token_digest(application_token),
@@ -27,10 +33,21 @@ namespace :hub do
     )
     application.save!
 
-    worker = Worker.find_or_initialize_by(name: ENV.fetch("WORKER_NAME"))
+    worker = organization.workers.find_or_initialize_by(name: ENV.fetch("WORKER_NAME"))
     worker.assign_attributes(token_digest: Worker.token_digest(worker_token), active: true)
     worker.save!
 
     puts "Provisioned application #{application.slug} and worker #{worker.name}"
+  end
+
+
+  desc "Create an owner account for an existing organization"
+  task create_owner: :environment do
+    organization = Organization.find_by!(slug: ENV.fetch("ORG_SLUG"))
+    user = User.find_or_initialize_by(email_address: ENV.fetch("OWNER_EMAIL"))
+    user.password = ENV.fetch("OWNER_PASSWORD")
+    user.save!
+    organization.memberships.find_or_create_by!(user:) { |membership| membership.role = "owner" }
+    puts "Owner ready for #{organization.slug}: #{user.email_address}"
   end
 end

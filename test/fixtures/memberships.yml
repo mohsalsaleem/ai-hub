@@ -1,0 +1,9 @@
+one_owner:
+  organization: one
+  user: one
+  role: owner
+
+two_owner:
+  organization: two
+  user: two
+  role: owner

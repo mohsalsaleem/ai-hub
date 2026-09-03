@@ -1,0 +1,4 @@
+<% content_for :title, "New application · AI Hub" %>
+<div class="form-page"><%= link_to "← Applications", applications_path, class: "back-link" %><h1>New application</h1><p>Applications receive a scoped token for submitting jobs and managing task definitions.</p>
+  <%= form_with model: @application, url: applications_path, class: "stack-form" do |form| %><%= render "shared/errors", record: @application %><label>Name<%= form.text_field :name, required: true, autofocus: true, placeholder: "SUMS Core" %></label><label>Slug<%= form.text_field :slug, required: true, placeholder: "sums-core", pattern: "[a-z0-9]+(?:-[a-z0-9]+)*" %><small>Lowercase letters, numbers and hyphens.</small></label><%= form.submit "Create application", class: "button" %><% end %>
+</div>

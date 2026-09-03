@@ -9,7 +9,7 @@ class TaskDefinition < ApplicationRecord
   validates :version, numericality: { only_integer: true, greater_than: 0 }
   validates :executor, inclusion: { in: EXECUTORS }
   validates :instructions, presence: true, length: { maximum: 20_000 }
-  validates :digest, presence: true, uniqueness: true
+  validates :digest, presence: true
   validates :version, uniqueness: { scope: [ :hub_application_id, :key ] }
   validate :schemas_are_valid
 

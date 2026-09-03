@@ -1,6 +1,7 @@
 class Worker < ApplicationRecord
   include TokenAuthenticatable
 
+  belongs_to :organization
   has_many :jobs, dependent: :nullify
 
   validates :name, presence: true

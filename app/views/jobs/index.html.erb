@@ -1,0 +1,4 @@
+<% content_for :title, "Jobs · AI Hub" %>
+<%= render "shared/page_header", title: "Jobs", description: "Asynchronous queue, execution status and history" %>
+<nav class="filter-tabs" aria-label="Job status filters"><%= link_to "All", jobs_path, class: @status.nil? ? "is-active" : nil %><% Job::STATUSES.each do |status| %><%= link_to(status == "leased" ? "Running" : status.humanize, jobs_path(status: status), class: @status == status ? "is-active" : nil) %><% end %></nav>
+<%= render "table", jobs: @jobs %>

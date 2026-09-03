@@ -2,8 +2,9 @@ require "test_helper"
 
 class JobProtocolTest < ActionDispatch::IntegrationTest
   setup do
-    @application, @application_token = HubApplication.issue!(name: "Sums", slug: "sums")
-    @worker, @worker_token = Worker.issue!(name: "Home worker")
+    @organization = organizations(:one)
+    @application, @application_token = HubApplication.issue!(organization: @organization, name: "Sums", slug: "sums")
+    @worker, @worker_token = Worker.issue!(organization: @organization, name: "Home worker")
     @definition = @application.task_definitions.create!(
       key: "sums.extract", version: 1, instructions: "Extract the title.",
       input_schema: { type: "object", required: [ "text" ], properties: { text: { type: "string" } } },
@@ -94,7 +95,7 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
     post api_v1_worker_claims_path, params: {}, headers: application_headers, as: :json
     assert_response :unauthorized
 
-    other, token = HubApplication.issue!(name: "Other", slug: "other")
+    other, token = HubApplication.issue!(organization: organizations(:two), name: "Other", slug: "other")
     get api_v1_job_path(@application.jobs.create!(task_definition: @definition,
       idempotency_key: "private", input: { text: "x" }).public_id), headers: { "Authorization" => "Bearer #{token}" }
     assert_response :not_found
@@ -122,6 +123,18 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
     @application.jobs.create!(task_definition: vision, idempotency_key: "vision", input: {})
 
     post api_v1_worker_claims_path, headers: worker_headers, as: :json
+    assert_response :success
+    assert_nil response.parsed_body["job"]
+  end
+
+  test "workers never claim another organization's compatible jobs" do
+    other_application, = HubApplication.issue!(organization: organizations(:two), name: "Other", slug: "other")
+    definition = other_application.task_definitions.create!(key: "other.task", version: 1,
+      instructions: "Summarize.", input_schema: { type: "object" }, output_schema: { type: "object" })
+    other_application.jobs.create!(task_definition: definition, idempotency_key: "tenant-boundary", input: {})
+
+    post api_v1_worker_claims_path, headers: worker_headers, as: :json
+
     assert_response :success
     assert_nil response.parsed_body["job"]
   end

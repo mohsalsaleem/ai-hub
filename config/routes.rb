@@ -1,4 +1,17 @@
 Rails.application.routes.draw do
+  resource :registration, only: %i[new create]
+  resource :session, only: %i[new create destroy]
+  resource :organization, only: %i[new create show update]
+  resources :applications, controller: "hub_applications", only: %i[index show new create] do
+    post :rotate_token, on: :member
+    patch :revoke, on: :member
+    resources :task_definitions, only: %i[new create]
+  end
+  resources :task_definitions, only: %i[index show]
+  resources :jobs, only: %i[index show]
+  resources :workers, only: %i[index create destroy] do
+    post :rotate_token, on: :member
+  end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

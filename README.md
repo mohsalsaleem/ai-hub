@@ -6,7 +6,7 @@ the Hub; a worker beside the model claims them over HTTPS and returns
 schema-validated results. The model machine never accepts an inbound internet
 connection.
 
-This repository is an early `0.1.0-dev` implementation. It deliberately has no
+This repository is an early `0.2.0-dev` implementation. It deliberately has no
 message broker, arbitrary code execution, tool calling, or hosted dependency.
 
 ## Architecture
@@ -22,6 +22,8 @@ Applications -> Rails Hub + SQLite <- long polling -> local worker -> model
 - The Ruby worker caches definitions and stores completed results in a bounded
   local SQLite outbox until the Hub acknowledges them.
 - Applications own deterministic validation and business persistence.
+- Organizations are isolated tenants. Applications, definitions, jobs, tokens,
+  and workers are always resolved through the signed-in organization.
 
 ## Local setup
 
@@ -30,12 +32,21 @@ Requirements: Ruby 3.3, SQLite, and an OpenAI-compatible model endpoint.
 ```bash
 bin/setup
 bin/rails db:migrate
-APP_NAME=Sums APP_SLUG=sums WORKER_NAME=Home bin/rails hub:bootstrap
-AI_HUB_ADMIN_PASSWORD=local bin/rails server
+bin/rails server
 ```
 
-Save the two tokens printed by `hub:bootstrap`; plaintext tokens are shown
-once. Start the worker in another terminal:
+Open `http://127.0.0.1:3000/registration/new` to create the first organization
+owner. The console then lets the owner create applications, publish task
+definitions, inspect jobs, and issue worker credentials. Plaintext application
+and worker tokens are shown once; AI Hub stores only their digests.
+
+For scripted bootstrapping instead, run:
+
+```bash
+ORG_NAME=SUMS APP_NAME=Sums APP_SLUG=sums WORKER_NAME=Home bin/rails hub:bootstrap
+```
+
+Start the worker in another terminal:
 
 ```bash
 AI_HUB_URL=http://127.0.0.1:3000 \
@@ -67,7 +78,7 @@ changed bundle dependencies, and restarts the LaunchAgent only after an update.
 The current macOS host schedules it at 04:45 using
 `worker/com.mohsal.ai-hub-worker-update.plist`.
 
-Open `http://127.0.0.1:3000` for job, worker, and task health.
+Open `http://127.0.0.1:3000` for the tenant-scoped operations console.
 
 ## First job
 
@@ -111,6 +122,9 @@ the status endpoint will remain the recovery path after they are introduced.
 ## Safety and limits
 
 - Task definitions are immutable by application, key, and version.
+- Browser access uses Rails' built-in password authentication and signed
+  database-backed sessions. Registration is intentionally open in this first
+  release; email verification and password recovery are not yet enabled.
 - Application and worker credentials are separate SHA-256-digested bearer tokens.
 - Job input and output requests are capped at 256 KiB.
 - Definitions are capped at 96 KiB per API request.
@@ -119,7 +133,8 @@ the status endpoint will remain the recovery path after they are introduced.
 - Worker results are accepted only for the current lease; repeated successful
   completion is acknowledged idempotently.
 - The local outbox stops new work instead of silently dropping results.
-- Production UI requires `AI_HUB_ADMIN_PASSWORD`.
+- Organization membership is the authorization boundary for every console read
+  and mutation; worker claims and definition lookup are tenant-scoped as well.
 
 See [docs/protocol.md](docs/protocol.md) for lifecycle and API semantics.
 
@@ -138,7 +153,15 @@ deployment runs one Rails instance and mounts a named persistent volume at
 `/rails/storage`; do not add replicas while SQLite is in use. Container startup
 runs `bin/rails db:prepare`, and `/up` is the health check.
 
-Coolify must provide `RAILS_MASTER_KEY` and `AI_HUB_ADMIN_PASSWORD` as secrets.
+Coolify must provide `RAILS_MASTER_KEY` as a secret. After migrating an existing
+single-admin installation, create its first owner without rotating existing API
+or worker tokens:
+
+```bash
+ORG_SLUG=sums OWNER_EMAIL=owner@example.com OWNER_PASSWORD='change-me' \
+  bin/rails hub:create_owner
+```
+
 The SQLite volume is backed up daily with 14-day retention. To restore, stop
 the application, restore the complete storage-volume snapshot, then start the
 same known-good release and verify `/up` plus an authenticated job read. Record
