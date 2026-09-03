@@ -61,6 +61,10 @@ On the current macOS model host, `worker/com.mohsal.ai-hub-worker.plist` runs
 the worker as a login service. Its wrapper reads the token from macOS Keychain;
 the plist and repository contain no credential.
 
+`worker/update-from-main` is safe to run daily from cron. It refuses to update
+a non-`main` or dirty checkout, fast-forwards from `origin/main`, installs any
+changed bundle dependencies, and restarts the LaunchAgent only after an update.
+
 Open `http://127.0.0.1:3000` for job, worker, and task health.
 
 ## First job

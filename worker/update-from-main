@@ -1,0 +1,52 @@
+#!/bin/sh
+# Safely fast-forward the local AI Hub checkout and restart its LaunchAgent.
+set -eu
+
+PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin"
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+LOG_DIR="$HOME/Library/Logs/ai-hub-worker-update"
+LABEL="com.mohsal.ai-hub-worker"
+PLIST="$REPO/worker/$LABEL.plist"
+INSTALLED_PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+
+if [ ! -t 1 ]; then
+  mkdir -p "$LOG_DIR"
+  find "$LOG_DIR" -name '*.log' -mtime +30 -delete
+  exec >> "$LOG_DIR/$(date '+%Y-%m-%d').log" 2>&1
+fi
+
+cd "$REPO"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] AI Hub worker update starting"
+
+if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then
+  echo "skip: repo is not on main"
+  exit 0
+fi
+if [ -n "$(git status --porcelain -uno)" ]; then
+  echo "skip: working tree has uncommitted changes"
+  exit 0
+fi
+
+before="$(git rev-parse HEAD)"
+git fetch origin main
+git merge --ff-only origin/main
+after="$(git rev-parse HEAD)"
+
+if [ "$before" = "$after" ]; then
+  echo "done: already current"
+  exit 0
+fi
+
+set +u
+. /Users/samsal/.rvm/scripts/rvm
+set -u
+rvm use 3.3.6 >/dev/null
+bundle check || bundle install
+
+mkdir -p "$HOME/Library/LaunchAgents"
+/usr/bin/install -m 600 "$PLIST" "$INSTALLED_PLIST"
+launchctl bootout "gui/$(id -u)" "$INSTALLED_PLIST" 2>/dev/null || true
+launchctl bootstrap "gui/$(id -u)" "$INSTALLED_PLIST"
+launchctl kickstart -k "gui/$(id -u)/$LABEL"
+
+echo "done: updated $before -> $after"
