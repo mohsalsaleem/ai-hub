@@ -92,7 +92,7 @@ default. Configure the Hub with:
 AI_HUB_OPENAI_SYNC_TIMEOUT=60
 ```
 
-The accepted range is 1–300 seconds. Workers keep an outbound long-poll claim
+The accepted range is 1 to 300 seconds. Workers keep an outbound long-poll claim
 open and normally receive a queued job within 500 ms. The long-poll duration is
 not an additional pickup delay.
 

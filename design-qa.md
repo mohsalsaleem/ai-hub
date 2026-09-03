@@ -18,12 +18,12 @@
 
 ## Findings and resolutions
 
-- P1 — console resources were not tenant-scoped: resolved with organization ownership and scoped controller queries.
-- P1 — worker claims and definition lookup could cross an organization boundary: resolved and covered by protocol tests.
-- P1 — identical content digests collided globally across tenants: resolved by allowing the indexed digest to repeat while lookup remains organization-scoped.
-- P2 — desktop-only sidebar did not adapt to narrow screens: resolved with the compact navigation breakpoint and single-column cards.
-- P2 — long job identifiers could overflow the detail header: resolved with a constrained flex child and safe wrapping.
-- P2 — an unused import-map tag produced a console error: removed; the final reload produced no new console errors.
+- P1: console resources were not tenant-scoped. Resolved with organization ownership and scoped controller queries.
+- P1: worker claims and definition lookup could cross an organization boundary. Resolved and covered by protocol tests.
+- P1: identical content digests collided globally across tenants. Resolved by allowing the indexed digest to repeat while lookup remains organization-scoped.
+- P2: desktop-only sidebar did not adapt to narrow screens. Resolved with the compact navigation breakpoint and single-column cards.
+- P2: long job identifiers could overflow the detail header. Resolved with a constrained flex child and safe wrapping.
+- P2: an unused import-map tag produced a console error. Removed; the final reload produced no new console errors.
 
 ## Final review
 

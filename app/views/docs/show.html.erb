@@ -10,7 +10,7 @@
     <main class="docs-content">
       <section id="overview"><span class="eyebrow">AI Hub docs</span><h1>Connect applications to private models.</h1><p class="docs-lead">AI Hub is a self-hosted control plane with an outbound-only worker. Applications receive scoped tokens and can use either familiar OpenAI endpoints or durable structured jobs.</p></section>
 
-      <section id="quickstart"><h2>Quickstart</h2><p>Create an account, then create an application in the console. Copy its token when it is shown—the plaintext value is never stored by AI Hub.</p><ol><li>Create an application.</li><li>Add an OpenAI model profile or publish a structured task definition.</li><li>Issue a worker token from the Workers screen.</li><li>Start a worker beside your OpenAI-compatible local model.</li></ol><pre><code>AI_HUB_URL=https://your-hub.example \
+      <section id="quickstart"><h2>Quickstart</h2><p>Create an account, then create an application in the console. Copy its token when it is shown. The plaintext value is never stored by AI Hub.</p><ol><li>Create an application.</li><li>Add an OpenAI model profile or publish a structured task definition.</li><li>Issue a worker token from the Workers screen.</li><li>Start a worker beside your OpenAI-compatible local model.</li></ol><pre><code>AI_HUB_URL=https://your-hub.example \
 AI_HUB_WORKER_TOKEN=aih_... \
 AI_MODEL_URL=http://127.0.0.1:8080/v1 \
 AI_MODEL=local-model \
