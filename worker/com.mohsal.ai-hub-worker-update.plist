@@ -6,7 +6,7 @@
   <string>com.mohsal.ai-hub-worker-update</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/samsal/saleem/spends-tracker/personal-ai-hub/worker/update-from-main</string>
+    <string>/Users/samsal/saleem/ai-hub/worker/update-from-main</string>
   </array>
   <key>StartCalendarInterval</key>
   <dict>

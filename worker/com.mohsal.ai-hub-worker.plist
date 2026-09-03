@@ -6,10 +6,10 @@
   <string>com.mohsal.ai-hub-worker</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/samsal/saleem/spends-tracker/personal-ai-hub/worker/run-local</string>
+    <string>/Users/samsal/saleem/ai-hub/worker/run-local</string>
   </array>
   <key>WorkingDirectory</key>
-  <string>/Users/samsal/saleem/spends-tracker/personal-ai-hub</string>
+  <string>/Users/samsal/saleem/ai-hub</string>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>
@@ -17,8 +17,8 @@
   <key>ThrottleInterval</key>
   <integer>10</integer>
   <key>StandardOutPath</key>
-  <string>/Users/samsal/saleem/spends-tracker/personal-ai-hub/storage/local-worker.stdout.log</string>
+  <string>/Users/samsal/saleem/ai-hub/storage/local-worker.stdout.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/samsal/saleem/spends-tracker/personal-ai-hub/storage/local-worker.stderr.log</string>
+  <string>/Users/samsal/saleem/ai-hub/storage/local-worker.stderr.log</string>
 </dict>
 </plist>
