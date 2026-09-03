@@ -1,0 +1,16 @@
+#!/bin/zsh
+set -e
+
+export AI_HUB_URL="https://aihub.mohsal.dev"
+export AI_HUB_WORKER_TOKEN="$(/usr/bin/security find-generic-password -a home-worker -s aihub.mohsal.dev.worker-token -w)"
+export AI_HUB_WORKER_ID="home-worker"
+export AI_HUB_STATE_PATH="/Users/samsal/saleem/spends-tracker/personal-ai-hub/storage/local-worker"
+export AI_HUB_POLL_WAIT="20"
+export AI_MODEL_URL="http://127.0.0.1:8080/v1"
+export AI_MODEL="qwen3.5-9b"
+export AI_MODEL_API_KEY="local"
+
+source /Users/samsal/.rvm/scripts/rvm
+cd /Users/samsal/saleem/spends-tracker/personal-ai-hub
+rvm use 3.3.6 >/dev/null
+exec bundle exec ruby worker/worker.rb

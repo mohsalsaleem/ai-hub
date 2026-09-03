@@ -57,6 +57,10 @@ docker compose up -d --build
 The Compose file can also read `AI_HUB_WORKER_TOKEN` directly from the shell;
 an `.env` file is optional.
 
+On the current macOS model host, `worker/com.mohsal.ai-hub-worker.plist` runs
+the worker as a login service. Its wrapper reads the token from macOS Keychain;
+the plist and repository contain no credential.
+
 Open `http://127.0.0.1:3000` for job, worker, and task health.
 
 ## First job
