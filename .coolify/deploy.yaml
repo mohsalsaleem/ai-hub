@@ -12,7 +12,7 @@ environments:
   production:
     branch: main
     domain: https://aihub.mohsal.dev
-    coolify_application_uuid: ""
+    coolify_application_uuid: hqqbsnpdwmhsyzjxitpz2r8r
     replicas: 1
     database:
       engine: sqlite
