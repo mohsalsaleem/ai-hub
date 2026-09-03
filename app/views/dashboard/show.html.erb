@@ -1,0 +1,53 @@
+<% content_for :title, "AI Hub" %>
+<div class="eyebrow">Operations</div>
+<h1>Private models, shared safely.</h1>
+<p class="lead">Durable asynchronous jobs for applications that need an outbound-only worker beside a local model.</p>
+
+<section class="section"><div class="grid">
+  <div class="card"><div class="label">Queued</div><div class="stat"><%= @counts.fetch("queued", 0) %></div></div>
+  <div class="card"><div class="label">Leased</div><div class="stat"><%= @counts.fetch("leased", 0) %></div></div>
+  <div class="card"><div class="label">Completed</div><div class="stat"><%= @counts.fetch("completed", 0) %></div></div>
+  <div class="card"><div class="label">Failed / dead</div><div class="stat"><%= @counts.fetch("failed", 0) + @counts.fetch("dead", 0) %></div></div>
+</div></section>
+
+<section class="section">
+  <div class="section-head"><h2>Workers</h2><p><%= @workers.count(&:online?) %> online</p></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Worker</th><th>Status</th><th>Version</th><th>Capabilities</th><th>Last seen</th></tr></thead>
+    <tbody>
+      <% @workers.each do |worker| %><tr>
+        <td><strong><%= worker.name %></strong><div class="secondary"><%= worker.reported_id || "not connected" %></div></td>
+        <td><span class="badge <%= worker.online? ? 'badge-good' : 'badge-warn' %>"><%= worker.online? ? "online" : "offline" %></span></td>
+        <td class="mono"><%= worker.version || "—" %></td><td><%= worker.capabilities.join(", ").presence || "—" %></td>
+        <td><%= worker.last_seen_at ? time_ago_in_words(worker.last_seen_at) + " ago" : "never" %></td>
+      </tr><% end %>
+      <% if @workers.empty? %><tr><td colspan="5" class="empty">No workers registered.</td></tr><% end %>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="section">
+  <div class="section-head"><h2>Recent jobs</h2><p>Latest 25</p></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Job</th><th>Application</th><th>Task</th><th>Status</th><th>Attempts</th><th>Created</th></tr></thead>
+    <tbody>
+      <% @jobs.each do |job| %><tr>
+        <td class="mono"><%= job.public_id %></td><td><%= job.hub_application.name %></td><td class="mono"><%= job.task_definition.reference %></td>
+        <td><span class="badge <%= job.status == 'completed' ? 'badge-good' : (%w[failed dead].include?(job.status) ? 'badge-bad' : 'badge-warn') %>"><%= job.status %></span></td>
+        <td><%= job.attempts %> / <%= job.max_attempts %></td><td><%= time_ago_in_words(job.created_at) %> ago</td>
+      </tr><% end %>
+      <% if @jobs.empty? %><tr><td colspan="6" class="empty">No jobs submitted.</td></tr><% end %>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="section">
+  <div class="section-head"><h2>Task definitions</h2><p>Immutable versions</p></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Application</th><th>Reference</th><th>Executor</th><th>Digest</th></tr></thead>
+    <tbody>
+      <% @definitions.each do |definition| %><tr><td><%= definition.hub_application.name %></td><td class="mono"><%= definition.reference %></td><td><%= definition.executor %></td><td class="mono"><%= definition.digest.first(12) %></td></tr><% end %>
+      <% if @definitions.empty? %><tr><td colspan="4" class="empty">No task definitions registered.</td></tr><% end %>
+    </tbody>
+  </table></div>
+</section>
