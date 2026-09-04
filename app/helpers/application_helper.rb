@@ -24,6 +24,14 @@ module ApplicationHelper
     JSON.pretty_generate(value || {})
   end
 
+  def format_duration_ms(milliseconds)
+    return "Unavailable" if milliseconds.nil?
+    return "#{milliseconds} ms" if milliseconds < 1_000
+    return "#{(milliseconds / 1_000.0).round(1)} s" if milliseconds < 60_000
+
+    distance_of_time_in_words(0, milliseconds / 1_000.0)
+  end
+
   def worker_trust_options
     [
       [ "Owner operated", "owner" ],

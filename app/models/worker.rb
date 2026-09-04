@@ -9,6 +9,7 @@ class Worker < ApplicationRecord
   belongs_to :organization
   has_many :jobs, dependent: :nullify
   has_many :routing_decisions, dependent: :nullify
+  has_many :job_executions, dependent: :nullify
   has_many :worker_request_nonces, dependent: :delete_all
   has_many :worker_enrollment_grants, dependent: :delete_all
   has_many :worker_identity_events, dependent: :delete_all

@@ -91,6 +91,23 @@ module Openai
         end
       end
 
+      def canonical_response_usage(job)
+        execution = job.job_executions.finalized.where(outcome: "completed", usage_reported: true)
+          .order(attempt_number: :desc).first
+        return normalize_response_usage(job.output["usage"] || {}) unless execution
+
+        { input_tokens: execution.input_tokens.to_i, input_tokens_details: {},
+          output_tokens: execution.output_tokens.to_i, output_tokens_details: {},
+          total_tokens: execution.total_tokens.to_i }
+      end
+
+      def normalize_response_usage(usage)
+        input = usage["input_tokens"] || usage["prompt_tokens"] || 0
+        output = usage["output_tokens"] || usage["completion_tokens"] || 0
+        { input_tokens: input, input_tokens_details: {}, output_tokens: output,
+          output_tokens_details: {}, total_tokens: usage["total_tokens"] || input + output }
+      end
+
       def render_job_error(job)
         message = job.error.is_a?(Hash) ? job.error["message"] : nil
         render_openai_error(message.presence || "Model execution failed", code: "model_error", status: :bad_gateway)

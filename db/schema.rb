@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_130000) do
   create_table "hub_applications", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
@@ -26,6 +26,45 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_120000) do
     t.index ["organization_id"], name: "index_hub_applications_on_organization_id"
     t.index ["token_digest"], name: "index_hub_applications_on_token_digest", unique: true
     t.index ["worker_pool_id"], name: "index_hub_applications_on_worker_pool_id"
+  end
+
+  create_table "job_executions", force: :cascade do |t|
+    t.string "application_name", null: false
+    t.integer "attempt_number", null: false
+    t.integer "consumer_organization_id", null: false
+    t.string "consumer_organization_name", null: false
+    t.datetime "created_at", null: false
+    t.string "failure_code"
+    t.datetime "finished_at"
+    t.bigint "hub_duration_ms"
+    t.bigint "input_tokens"
+    t.integer "job_id", null: false
+    t.string "llm_model"
+    t.bigint "model_duration_ms"
+    t.string "outcome", default: "running", null: false
+    t.bigint "output_tokens"
+    t.integer "provider_organization_id", null: false
+    t.string "provider_organization_name", null: false
+    t.boolean "shared", null: false
+    t.datetime "started_at", null: false
+    t.string "task_reference", null: false
+    t.bigint "total_tokens"
+    t.datetime "updated_at", null: false
+    t.boolean "usage_reported", default: false, null: false
+    t.integer "usage_schema_version"
+    t.integer "worker_id"
+    t.string "worker_name", null: false
+    t.integer "worker_pool_id"
+    t.string "worker_pool_name"
+    t.index ["consumer_organization_id", "finished_at"], name: "index_executions_on_consumer_and_finished"
+    t.index ["consumer_organization_id"], name: "index_job_executions_on_consumer_organization_id"
+    t.index ["job_id", "attempt_number"], name: "index_job_executions_on_job_id_and_attempt_number", unique: true
+    t.index ["job_id"], name: "index_job_executions_on_job_id"
+    t.index ["provider_organization_id", "finished_at"], name: "index_executions_on_provider_and_finished"
+    t.index ["provider_organization_id"], name: "index_job_executions_on_provider_organization_id"
+    t.index ["shared", "finished_at"], name: "index_job_executions_on_shared_and_finished_at"
+    t.index ["worker_id"], name: "index_job_executions_on_worker_id"
+    t.index ["worker_pool_id"], name: "index_job_executions_on_worker_pool_id"
   end
 
   create_table "jobs", force: :cascade do |t|
@@ -261,6 +300,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_120000) do
 
   add_foreign_key "hub_applications", "organizations"
   add_foreign_key "hub_applications", "worker_pools"
+  add_foreign_key "job_executions", "jobs"
+  add_foreign_key "job_executions", "organizations", column: "consumer_organization_id"
+  add_foreign_key "job_executions", "organizations", column: "provider_organization_id"
+  add_foreign_key "job_executions", "worker_pools", on_delete: :nullify
+  add_foreign_key "job_executions", "workers", on_delete: :nullify
   add_foreign_key "jobs", "hub_applications"
   add_foreign_key "jobs", "task_definitions"
   add_foreign_key "jobs", "worker_pools", on_delete: :nullify

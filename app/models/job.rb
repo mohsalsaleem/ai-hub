@@ -7,6 +7,7 @@ class Job < ApplicationRecord
   belongs_to :worker, optional: true
   belongs_to :worker_pool, optional: true
   has_many :routing_decisions, dependent: :destroy
+  has_many :job_executions, dependent: :restrict_with_error
 
   validates :public_id, presence: true, uniqueness: true
   validates :idempotency_key, presence: true, uniqueness: { scope: :hub_application_id }

@@ -322,6 +322,14 @@ Provider-owned shared pools begin in pending review and cannot route consumer
 runs until approved. Suspension and revocation are audited. The operator sees
 routing metadata but not run inputs, outputs, or task instructions.
 
+The metering foundation creates one execution record for each claim attempt,
+including retries and lease expiry. It snapshots consumer, provider, pool,
+worker, application, and task identities, while storing only bounded canonical
+token counts and timing fields. Finalized execution evidence is immutable.
+Consumer views omit provider worker and model identity; provider and platform
+views omit consumer payloads. Pricing and balance changes remain out of scope
+until these records are proven reliable.
+
 ### Milestone 5: Metering and rewards
 
 - Record immutable usage and outcome evidence per run.

@@ -37,14 +37,7 @@ module Openai
           status: completed ? "completed" : "in_progress", model: definition.reference,
           output: completed ? [ { type: "message", id: "msg_#{job.public_id.delete_prefix('job_')}",
             status: "completed", role: "assistant", content: [ { type: "output_text", text: content, annotations: [] } ] } ] : [],
-          output_text: content, usage: completed ? response_usage(job.output["usage"] || {}) : nil, error: nil }
-      end
-
-      def response_usage(usage)
-        input = usage["input_tokens"] || usage["prompt_tokens"] || 0
-        output = usage["output_tokens"] || usage["completion_tokens"] || 0
-        { input_tokens: input, input_tokens_details: {}, output_tokens: output,
-          output_tokens_details: {}, total_tokens: usage["total_tokens"] || input + output }
+          output_text: content, usage: completed ? canonical_response_usage(job) : nil, error: nil }
       end
     end
   end

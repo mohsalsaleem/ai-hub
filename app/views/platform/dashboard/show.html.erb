@@ -8,6 +8,8 @@
   <article class="metric-card"><span>Shared capacity</span><strong><%= @shared_workers.count(&:active?) %></strong><small><%= @shared_workers.count(&:online?) %> workers online</small></article>
 </section>
 
+<%= render "shared/usage_summary", summary: @shared_usage_summary, label: "Shared usage · 30 days", description: "Cross-organization model work, without prompts or responses" %>
+
 <section class="panel platform-section">
   <div class="section-head"><div><span class="overline">Trust boundary</span><h2>Shared pools</h2></div><span class="secondary"><%= pluralize(@shared_pools.size, "pool") %></span></div>
   <div class="table-wrap"><table><thead><tr><th>Pool</th><th>Provider</th><th>Status</th><th>Capacity</th><th>Consumers</th><th>Action</th></tr></thead><tbody>
@@ -43,7 +45,10 @@
       <% @recent_shared_runs.each do |job| %>
         <div>
           <span><strong class="mono"><%= job.public_id %></strong><small><%= job.hub_application.organization.name %> via <%= job.worker_pool.name %></small></span>
-          <span><%= status_badge(job.status == "leased" ? "running" : job.status) %><small><%= time_ago_in_words(job.created_at) %> ago</small></span>
+          <% execution = job.job_executions.select(&:finalized?).max_by(&:attempt_number) %>
+          <span><%= status_badge(job.status == "leased" ? "running" : job.status) %>
+            <small><%= execution&.total_tokens ? "#{number_with_delimiter(execution.total_tokens)} tokens · " : "" %><%= time_ago_in_words(job.created_at) %> ago</small>
+          </span>
         </div>
       <% end %>
       <% if @recent_shared_runs.empty? %><p class="empty-state">No cross-organization runs yet.</p><% end %>

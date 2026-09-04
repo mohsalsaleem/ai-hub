@@ -19,5 +19,5 @@ require_relative "ai_hub_worker/result_outbox"
 require_relative "ai_hub_worker/runner"
 
 module AiHubWorker
-  VERSION = "0.2.0-dev"
+  VERSION = "0.3.0-dev"
 end

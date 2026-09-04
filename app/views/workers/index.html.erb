@@ -46,6 +46,28 @@
   </section>
 <% end %>
 
+<%= render "shared/usage_summary", summary: @provider_usage_summary, label: "Usage · 30 days", description: "Model work served by this organization's workers" %>
+
+<% if @recent_provider_executions.any? %>
+  <section class="panel section-block">
+    <div class="section-head"><div><span class="overline">Accounting evidence</span><h2>Recent executions</h2></div></div>
+    <div class="table-wrap"><table><thead><tr><th>When</th><th>Worker</th><th>LLM model</th><th>Pool</th><th>Scope</th><th>Outcome</th><th>Tokens</th><th>Model time</th></tr></thead><tbody>
+      <% @recent_provider_executions.each do |execution| %>
+        <tr>
+          <td><%= time_ago_in_words(execution.finished_at) %> ago</td>
+          <td><%= execution.worker_name %></td>
+          <td><%= execution.llm_model || "Unavailable" %></td>
+          <td><%= execution.worker_pool_name || "Automatic" %></td>
+          <td><%= execution.shared? ? "Shared" : "Private" %></td>
+          <td><%= status_badge(execution.outcome) %></td>
+          <td><%= execution.total_tokens ? number_with_delimiter(execution.total_tokens) : "Unavailable" %></td>
+          <td><%= format_duration_ms(execution.model_duration_ms) %></td>
+        </tr>
+      <% end %>
+    </tbody></table></div>
+  </section>
+<% end %>
+
 <div class="worker-grid">
   <% @workers.each do |worker| %>
     <% participation_state = worker.participation_state %>

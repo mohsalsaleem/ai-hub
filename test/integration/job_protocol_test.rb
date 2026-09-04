@@ -107,11 +107,15 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
     post api_v1_worker_claims_path, headers: worker_headers, as: :json
     assert_equal job.public_id, response.parsed_body.dig("job", "id")
 
+    sweeper, sweeper_token = Worker.issue!(organization: organizations(:two), name: "Lease sweeper")
     travel Job::LEASE_SECONDS.seconds + 1.second do
-      post api_v1_worker_claims_path, headers: worker_headers, as: :json
+      post api_v1_worker_claims_path,
+        headers: { "Authorization" => "Bearer #{sweeper_token}", "X-Worker-Id" => "sweeper",
+                   "X-Worker-Capabilities" => "structured_generation" }, as: :json
       assert_nil response.parsed_body["job"]
     end
 
+    assert sweeper.active?
     assert_equal "dead", job.reload.status
     assert_equal "lease_expired", job.error.fetch("code")
     assert_equal 2, job.routing_decisions.count
@@ -372,5 +376,84 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
     assert Worker.authenticate(new_token)
     assert WorkerEnrollmentGrant.authenticate(new_token)
     assert_equal "identity_reset", @worker.worker_identity_events.order(:created_at).last.event_type
+  end
+
+  test "each claim creates an execution and completion finalizes canonical usage" do
+    job = @application.jobs.create!(task_definition: @definition, idempotency_key: "metered",
+      input: { text: "Hello" })
+
+    assert_difference "JobExecution.count", 1 do
+      post api_v1_worker_claims_path, headers: worker_headers, as: :json
+    end
+    lease = response.parsed_body.fetch("lease_token")
+    execution = job.job_executions.sole
+    assert_equal "running", execution.outcome
+    assert_equal @organization, execution.consumer_organization
+    assert_equal @organization, execution.provider_organization
+    assert_equal @worker.name, execution.worker_name
+
+    post api_v1_worker_job_complete_path(job.public_id), headers: worker_headers, as: :json,
+      params: { lease_token: lease, output: { title: "Hello" }, usage: {
+        schema_version: 1, llm_model: "local-model", prompt_tokens: 7,
+        completion_tokens: 3, total_tokens: 99, duration_ms: 42
+      } }
+
+    assert_response :success
+    execution.reload
+    assert_equal "completed", execution.outcome
+    assert_equal "local-model", execution.llm_model
+    assert_equal 7, execution.input_tokens
+    assert_equal 3, execution.output_tokens
+    assert_equal 10, execution.total_tokens
+    assert_equal 42, execution.model_duration_ms
+    assert execution.finished_at.present?
+
+    get api_v1_job_path(job.public_id), headers: application_headers
+    assert_response :success
+    assert_equal 1, response.parsed_body.dig("usage", "reported_attempts")
+    assert_equal 10, response.parsed_body.dig("usage", "total_tokens")
+    assert_equal 42, response.parsed_body.dig("usage", "model_duration_ms")
+
+    assert_no_difference "JobExecution.count" do
+      post api_v1_worker_job_complete_path(job.public_id), headers: worker_headers, as: :json,
+        params: { lease_token: lease, output: { title: "Hello" }, usage: { total_tokens: 500 } }
+    end
+    assert_equal 10, execution.reload.total_tokens
+  end
+
+  test "retryable model work creates a separate execution for every attempt" do
+    job = @application.jobs.create!(task_definition: @definition, idempotency_key: "metered-retry",
+      input: { text: "Hello" })
+    post api_v1_worker_claims_path, headers: worker_headers, as: :json
+    first_lease = response.parsed_body.fetch("lease_token")
+
+    post api_v1_worker_job_fail_path(job.public_id), headers: worker_headers, as: :json,
+      params: { lease_token: first_lease,
+                error: { code: "model_offline", message: "Unavailable", retryable: true },
+                usage: { schema_version: 1, model: "local", duration_ms: 20 } }
+
+    assert_equal "failed", job.job_executions.sole.outcome
+    travel 3.seconds do
+      post api_v1_worker_claims_path, headers: worker_headers, as: :json
+      assert_equal job.public_id, response.parsed_body.dig("job", "id")
+    end
+    assert_equal [ 1, 2 ], job.job_executions.order(:attempt_number).pluck(:attempt_number)
+    assert_equal %w[failed running], job.job_executions.order(:attempt_number).pluck(:outcome)
+  end
+
+  test "invalid usage cannot corrupt a leased execution" do
+    job = @application.jobs.create!(task_definition: @definition, idempotency_key: "invalid-usage",
+      input: { text: "Hello" })
+    post api_v1_worker_claims_path, headers: worker_headers, as: :json
+    lease = response.parsed_body.fetch("lease_token")
+
+    post api_v1_worker_job_complete_path(job.public_id), headers: worker_headers, as: :json,
+      params: { lease_token: lease, output: { title: "Hello" },
+                usage: { schema_version: 1, total_tokens: -1 } }
+
+    assert_response :unprocessable_entity
+    assert_equal "invalid_usage", response.parsed_body.fetch("error")
+    assert_equal "leased", job.reload.status
+    assert_equal "running", job.job_executions.sole.outcome
   end
 end

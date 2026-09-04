@@ -29,14 +29,21 @@ class OpenaiCompatibilityTest < ActionDispatch::IntegrationTest
     job = @application.jobs.find_by!(public_id: response_id)
     assert_equal [ { "role" => "user", "content" => "Hello" } ], job.input.fetch("messages")
 
+    worker, = Worker.issue!(organization: organizations(:one), name: "Local")
+    job.update!(status: "leased", attempts: 1, worker:, leased_until: 1.minute.from_now,
+      lease_token_digest: Job.token_digest("lease"))
+    JobExecution.start_for!(job:, worker:).finalize!(outcome: "completed", usage: UsageReport.normalize(
+      input_tokens: 3, output_tokens: 2, total_tokens: 99, duration_ms: 20
+    ))
     job.update!(status: "completed", output: {
-      "content" => "Hi", "finish_reason" => "stop", "usage" => { "total_tokens" => 2 }
+      "content" => "Hi", "finish_reason" => "stop", "usage" => { "total_tokens" => 99 }
     }, completed_at: Time.current)
     get "/v1/responses/#{response_id}", headers: headers
 
     assert_response :success
     assert_equal "completed", response.parsed_body.fetch("status")
     assert_equal "Hi", response.parsed_body.fetch("output_text")
+    assert_equal 5, response.parsed_body.dig("usage", "total_tokens")
   end
 
   test "reuses an OpenAI request with the same idempotency key" do

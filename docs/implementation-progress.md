@@ -6,9 +6,25 @@ lands, changes scope, or is deliberately deferred.
 
 ## Current milestone
 
+### Milestone 5: Metering and rewards
+
+Status: Immutable execution metering verified locally, pending commit
+
+| Work item | Status | Notes |
+| --- | --- | --- |
+| Per-attempt execution record | Complete locally | Every claim, retry, and lease expiry receives separate outcome evidence. |
+| Canonical usage report | Complete locally | Token aliases are normalized, totals are recomputed, and values are bounded. |
+| Finalized immutability | Complete locally | Terminal evidence cannot be updated or destroyed through application models. |
+| Consumer usage view | Complete locally | Run details show attempts, tokens, and duration without provider worker or model identity. |
+| Provider usage view | Complete locally | Hosting shows 30-day contribution and recent executions without consumer payloads. |
+| Platform usage view | Complete locally | Operations shows shared usage without prompts or responses. |
+| Credits and balances | Pending | Starts only after execution records are verified. |
+| Pricing and platform share | Deferred | Requires explicit charging policy and ledger reconciliation. |
+| Payments and payouts | Deferred | Begins only after internal credits reconcile reliably. |
+
 ### Milestone 4: Shared pools
 
-Status: Platform operator control complete locally, pending commit
+Status: Complete and committed
 
 | Work item | Status | Notes |
 | --- | --- | --- |
@@ -84,10 +100,14 @@ Status: Platform operator control complete locally, pending commit
 | 2026-09-04 | Operator console browser check | Separate sign-in, isolated navigation, pool review metadata, tenant return path, and payload exclusion verified locally. |
 | 2026-09-04 | Shared-pool local browser check | Provider grant management and consumer pool selection verified without worker disclosure. |
 | 2026-09-04 | Shared-pool commit | `246d3b0 Add granted shared pool routing` |
+| 2026-09-04 | Operator foundation commit | `64f038a Add isolated platform operator control` |
+| 2026-09-04 | Metering Rails tests | 106 tests, 535 assertions, no failures. |
+| 2026-09-04 | Metering RuboCop | 134 files, no offenses. |
+| 2026-09-04 | Metering Brakeman | 79 checks, no security warnings. |
+| 2026-09-04 | Metering browser check | Consumer run usage, provider contribution, platform shared usage, payload boundaries, and browsable docs verified locally. |
 
 ## Next work
 
-1. Verify operator authorization and shared pool controls locally.
-2. Commit and deploy the operator foundation.
-3. Design immutable usage metering and retention.
-4. Add platform-managed or multi-provider pools only after metering semantics are stable.
+1. Commit and deploy metering with worker 0.3.
+2. Define charging policy for success, failure, retry, and lease expiry.
+3. Add an append-only internal credit ledger with reconciliation checks.

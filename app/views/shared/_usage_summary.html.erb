@@ -1,0 +1,12 @@
+<section class="usage-summary" aria-label="<%= label %>">
+  <div class="usage-summary-copy">
+    <span class="overline"><%= label %></span>
+    <p><%= description %></p>
+  </div>
+  <dl>
+    <div><dt>Attempts</dt><dd><%= number_with_delimiter(summary.fetch(:attempts)) %></dd></div>
+    <div><dt>Completed</dt><dd><%= number_with_delimiter(summary.fetch(:completed)) %></dd></div>
+    <div><dt>Tokens</dt><dd><%= number_with_delimiter(summary.fetch(:tokens)) %></dd></div>
+    <div><dt>Model time</dt><dd><%= format_duration_ms(summary.fetch(:model_duration_ms)) %></dd></div>
+  </dl>
+</section>

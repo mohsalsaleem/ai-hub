@@ -40,8 +40,12 @@ class PlatformConsoleTest < ActionDispatch::IntegrationTest
     definition = application.task_definitions.create!(key: "consumer.extract", version: 1,
       executor: "structured_generation", instructions: "Extract a title.",
       input_schema: { type: "object" }, output_schema: { type: "object" })
-    application.jobs.create!(task_definition: definition, idempotency_key: "platform-visible",
+    job = application.jobs.create!(task_definition: definition, idempotency_key: "platform-visible",
       input: { private_message: "never render this value" })
+    job.update!(attempts: 1, status: "leased", worker:, leased_until: 1.minute.from_now,
+      lease_token_digest: Job.token_digest("lease"))
+    JobExecution.start_for!(job:, worker:).finalize!(outcome: "completed",
+      usage: UsageReport.normalize(input_tokens: 10, output_tokens: 4, duration_ms: 25))
 
     get platform_root_path
 
@@ -50,6 +54,7 @@ class PlatformConsoleTest < ActionDispatch::IntegrationTest
     assert_select "nav[aria-label='Platform navigation']", text: /Operations.*Tenant console/m
     assert_select "#pool-#{@pool.id}", text: /Shared GPU.*First organization.*Approved/m
     assert_match application.jobs.first.public_id, response.body
+    assert_select ".usage-summary", text: /Shared usage.*30 days.*14/m
     assert_no_match "never render this value", response.body
     assert_no_match "Extract a title", response.body
   end

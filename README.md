@@ -91,6 +91,11 @@ After enrollment, runtime requests are signed and the bearer token is no longer
 accepted for that worker. Rotating the token in the console resets the identity
 and issues a fresh grant.
 
+Worker 0.3 reports normalized model name, token counts, and inference duration
+with each terminal attempt. AI Hub stores one immutable accounting record per
+claim, including retries. Older workers remain compatible with usage marked as
+unavailable.
+
 On the current macOS model host, `worker/com.mohsal.ai-hub-worker.plist` runs
 the worker as a login service. Its wrapper reads the token from macOS Keychain;
 the plist and repository contain no credential.

@@ -53,11 +53,14 @@ module AiHubWorker
     def process(job, lease_token)
       renewer = start_lease_renewer(job.fetch("id"), lease_token)
       definition = @cache.fetch(job.fetch("task_digest")) { @client.definition(job.fetch("task_digest")) }
-      output = @executor.execute(definition, job.fetch("input"))
-      enqueue(job.fetch("id"), "complete", lease_token:, output:)
+      result = @executor.execute(definition, job.fetch("input"))
+      output = result.respond_to?(:output) ? result.output : result
+      usage = result.respond_to?(:usage) ? result.usage : nil
+      enqueue(job.fetch("id"), "complete", lease_token:, output:, usage:)
     rescue StandardError => e
       enqueue(job.fetch("id"), "fail", lease_token:,
-        error: { code: "execution_failed", message: e.message.to_s.first(500), retryable: true })
+        error: { code: "execution_failed", message: e.message.to_s.first(500), retryable: true },
+        usage: e.respond_to?(:usage) ? e.usage : nil)
     ensure
       renewer&.kill
       renewer&.join

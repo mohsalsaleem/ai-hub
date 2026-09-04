@@ -14,6 +14,7 @@ class WorkerPool < ApplicationRecord
   has_many :hub_applications, dependent: :nullify
   has_many :jobs, dependent: :nullify
   has_many :routing_decisions, dependent: :nullify
+  has_many :job_executions, dependent: :nullify
   has_many :worker_pool_access_grants, dependent: :destroy
   has_many :consumer_organizations, through: :worker_pool_access_grants, source: :organization
 

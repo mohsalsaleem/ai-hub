@@ -15,10 +15,13 @@ class JobClaimer
       return unless job
 
       plaintext = SecureRandom.hex(24)
+      now = Time.current
+      finalize_expired_execution(job, at: now) if job.leased?
       job.update!(
         status: "leased", worker: @worker, attempts: job.attempts + 1,
-        lease_token_digest: Job.token_digest(plaintext), leased_until: Job::LEASE_SECONDS.seconds.from_now
+        lease_token_digest: Job.token_digest(plaintext), leased_until: Job::LEASE_SECONDS.seconds.from_now(now)
       )
+      JobExecution.start_for!(job:, worker: @worker, started_at: now)
       job.routing_decisions.create!(outcome: "selected", reason: "eligible_worker_selected",
         worker: @worker, worker_pool: job.worker_pool,
         evidence: { attempt: job.attempts, worker: { id: @worker.id, name: @worker.name },
@@ -35,11 +38,22 @@ class JobClaimer
 
   def expire_exhausted_leases
     now = Time.current
-    @worker.jobs.where(status: "leased").where("jobs.leased_until < ?", now)
-      .where("jobs.attempts >= jobs.max_attempts")
-      .update_all(status: "dead", completed_at: now, leased_until: nil, lease_token_digest: nil,
-                  error: { code: "lease_expired", message: "The worker lease expired after the final attempt." },
-                  updated_at: now)
+    Job.where(status: "leased").where("jobs.leased_until < ?", now)
+      .where("jobs.attempts >= jobs.max_attempts").find_each do |job|
+        job.transaction do
+          finalize_expired_execution(job, at: now)
+          job.update!(status: "dead", completed_at: now, leased_until: nil, lease_token_digest: nil,
+            error: { code: "lease_expired", message: "The worker lease expired after the final attempt." })
+        end
+      end
+  end
+
+  def finalize_expired_execution(job, at:)
+    execution = job.job_executions.find_by(attempt_number: job.attempts)
+    execution ||= JobExecution.start_for!(job:, worker: job.worker, started_at: job.updated_at)
+    return if execution.finalized?
+
+    execution.finalize!(outcome: "expired", failure_code: "lease_expired", finished_at: at)
   end
 
   def eligible_jobs

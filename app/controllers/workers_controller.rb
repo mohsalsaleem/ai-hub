@@ -8,6 +8,10 @@ class WorkersController < ApplicationController
     @worker = current_organization.workers.new
     @worker_pool = current_organization.worker_pools.new
     @worker_pools = current_organization.worker_pools.includes(worker_pool_access_grants: :organization).order(:name)
+    provider_usage = current_organization.provided_job_executions.finalized
+      .where(finished_at: 30.days.ago..Time.current)
+    @provider_usage_summary = UsageSummary.new(provider_usage).call
+    @recent_provider_executions = provider_usage.order(finished_at: :desc).limit(20)
   end
 
   def create

@@ -6,6 +6,8 @@ module Api
 
         before_action :load_job
         before_action :verify_lease
+        rescue_from UsageReport::Invalid,
+          with: ->(error) { render json: { error: "invalid_usage", message: error.message }, status: :unprocessable_entity }
 
         def renew
           @job.update!(leased_until: Job::LEASE_SECONDS.seconds.from_now)
@@ -21,20 +23,31 @@ module Api
             return render json: { error: "output_schema_mismatch" }, status: :unprocessable_entity
           end
 
-          @job.update!(status: "completed", output:, error: nil, completed_at: Time.current,
-            leased_until: nil, lease_token_digest: nil)
+          usage = UsageReport.normalize(params[:usage])
+          @job.transaction do
+            current_execution.finalize!(outcome: "completed", usage:, finished_at: Time.current)
+            @job.update!(status: "completed", output:, error: nil, completed_at: Time.current,
+              leased_until: nil, lease_token_digest: nil)
+          end
           render json: { status: "completed" }
         end
 
         def fail
           error = params.require(:error).permit(:code, :message, :retryable).to_h
           retryable = ActiveModel::Type::Boolean.new.cast(error["retryable"])
-          if retryable && @job.attempts < @job.max_attempts
-            @job.update!(status: "queued", error:, available_at: backoff.from_now,
-              worker: nil, leased_until: nil, lease_token_digest: nil)
-          else
-            @job.update!(status: @job.attempts >= @job.max_attempts ? "dead" : "failed",
-              error:, completed_at: Time.current, leased_until: nil, lease_token_digest: nil)
+          usage = UsageReport.normalize(params[:usage])
+          @job.transaction do
+            status = if retryable && @job.attempts < @job.max_attempts
+              "queued"
+            else
+              @job.attempts >= @job.max_attempts ? "dead" : "failed"
+            end
+            current_execution.finalize!(outcome: status == "queued" ? "failed" : status,
+              usage:, failure_code: error["code"], finished_at: Time.current)
+            attributes = { status:, error:, leased_until: nil, lease_token_digest: nil }
+            attributes.merge!(available_at: backoff.from_now, worker: nil) if status == "queued"
+            attributes[:completed_at] = Time.current unless status == "queued"
+            @job.update!(attributes)
           end
           render json: { status: @job.status }
         end
@@ -53,6 +66,11 @@ module Api
           return if @job.lease_valid?(params[:lease_token])
 
           render json: { error: "stale_lease" }, status: :conflict
+        end
+
+        def current_execution
+          @job.job_executions.find_by(attempt_number: @job.attempts, worker: current_worker) ||
+            JobExecution.start_for!(job: @job, worker: current_worker, started_at: @job.updated_at)
         end
 
         def backoff = [ 2**@job.attempts, 300 ].min.seconds

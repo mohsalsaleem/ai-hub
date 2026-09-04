@@ -1,4 +1,4 @@
-# AI Hub protocol 0.2
+# AI Hub protocol 0.3
 
 All API requests use JSON. Application credentials use bearer authentication
 and can register task definitions and submit or read only their own jobs.
@@ -32,10 +32,12 @@ explicitly accept a lower tier and may bind an application to one worker pool.
 
 A claim is eligible only when all of these checks pass:
 
-1. The worker and application belong to the same organization.
-2. The worker meets the application's minimum trust tier.
-3. The worker belongs to the application's selected pool, when one is set.
-4. The worker advertises the executor and every required task capability.
+1. The run is local to the provider organization, or its selected shared pool
+   is approved and explicitly granted to the consumer organization.
+2. The worker belongs to the selected pool when one is set.
+3. The worker has opted into shared participation for cross-organization work.
+4. The worker meets the application's minimum trust tier.
+5. The worker advertises the executor and every required task capability.
 
 Worker trust is administrative policy, not cryptographic attestation. Signed
 requests prove possession of an enrolled device key. They do not prove who
@@ -71,6 +73,46 @@ Submitting the same key again returns the original job.
 Claims issue a random lease token valid for 180 seconds. A worker renews it
 during long inference. Completion and failure require the current lease token;
 an old worker cannot overwrite a job after it has been reclaimed.
+
+## Execution metering
+
+Every successful claim creates a separate execution record for that attempt.
+Completion, permanent failure, retryable failure, and lease expiry finalize that
+record once. A retry creates another execution rather than overwriting previous
+model work.
+
+The official worker includes this optional object with completion and failure:
+
+```json
+{
+  "usage": {
+    "schema_version": 1,
+    "llm_model": "local-model",
+    "input_tokens": 120,
+    "output_tokens": 30,
+    "total_tokens": 150,
+    "duration_ms": 1840
+  }
+}
+```
+
+`model` is accepted as a compatibility alias for `llm_model`. `prompt_tokens`
+and `completion_tokens` are accepted aliases. When both input
+and output counts exist, AI Hub calculates the canonical total itself. Counts
+must be non-negative integers no larger than one billion, model duration is
+limited to 24 hours, and model names are limited to 120 bytes. Malformed usage
+is rejected without changing the leased job or its execution record.
+
+Usage is provider-reported evidence. Hub duration is measured independently
+from claim to terminal report. Neither value is hardware attestation. Existing
+workers may omit usage during rolling upgrades; the execution is retained with
+usage marked unavailable.
+
+Execution rows contain fixed accounting fields and identity snapshots. They do
+not duplicate prompts, inputs, outputs, instructions, errors, or raw provider
+metadata. Finalized rows cannot be changed or deleted through application
+models. This initial release retains them without automatic expiry until ledger
+and jurisdiction-specific retention requirements are defined.
 
 ## Endpoints
 
@@ -112,6 +154,7 @@ Applications can only read their own jobs.
   "attempts": 1,
   "output": { "summary": "..." },
   "error": null,
+  "usage": { "attempts": 1, "reported_attempts": 1, "input_tokens": 120, "output_tokens": 30, "total_tokens": 150, "model_duration_ms": 1840 },
   "created_at": "2026-09-03T10:00:00Z",
   "completed_at": "2026-09-03T10:00:04Z"
 }
@@ -120,6 +163,9 @@ Applications can only read their own jobs.
 `queued` and `leased` are non-terminal. `completed`, `failed`, and `dead` are
 terminal. `output` is present after successful completion; unsuccessful jobs
 use `error`.
+
+The application response aggregates usage across all finalized attempts and
+does not expose worker, provider, or reported model identity.
 
 Version 0.1 does not deliver webhooks or callbacks. Applications must poll the
 status endpoint. A future signed-webhook delivery layer may provide faster

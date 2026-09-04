@@ -22,7 +22,7 @@ module Openai
         { id: "chatcmpl_#{job.public_id.delete_prefix('job_')}", object: "chat.completion",
           created: job.created_at.to_i, model: definition.reference,
           choices: [ { index: 0, message: { role: "assistant", content: output.fetch("content") },
-                       finish_reason: output["finish_reason"] || "stop" } ], usage: output["usage"] || {} }
+                       finish_reason: output["finish_reason"] || "stop" } ], usage: canonical_response_usage(job) }
       end
     end
   end

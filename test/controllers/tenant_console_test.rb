@@ -197,4 +197,43 @@ class TenantConsoleTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_nil @application.reload.worker_pool
   end
+
+  test "consumer run detail shows usage without provider worker identity" do
+    worker, = Worker.issue!(organization: organizations(:one), name: "Private machine name")
+    definition = @application.task_definitions.create!(key: "first.metered", version: 1,
+      instructions: "Generate.", input_schema: { type: "object" }, output_schema: { type: "object" })
+    job = @application.jobs.create!(task_definition: definition, idempotency_key: "metered-detail", input: {})
+    job.update!(attempts: 1, status: "leased", worker:, leased_until: 1.minute.from_now,
+      lease_token_digest: Job.token_digest("lease"))
+    JobExecution.start_for!(job:, worker:).finalize!(outcome: "completed", usage: UsageReport.normalize(
+      input_tokens: 8, output_tokens: 4, model: "provider-internal-model", duration_ms: 40
+    ))
+
+    get job_path(job.public_id)
+
+    assert_response :success
+    assert_select ".usage-summary", text: /Execution usage.*12/m
+    assert_select "table", text: /#1.*Completed.*8.*4.*12.*40 ms/m
+    assert_no_match "Private machine name", response.body
+    assert_no_match "provider-internal-model", response.body
+  end
+
+  test "provider hosting shows scoped execution totals without consumer payloads" do
+    worker, = Worker.issue!(organization: organizations(:one), name: "Meter worker")
+    definition = @application.task_definitions.create!(key: "first.hosting", version: 1,
+      instructions: "Generate.", input_schema: { type: "object" }, output_schema: { type: "object" })
+    job = @application.jobs.create!(task_definition: definition, idempotency_key: "hosting-usage",
+      input: { secret: "do not show" })
+    job.update!(attempts: 1, status: "leased", worker:, leased_until: 1.minute.from_now,
+      lease_token_digest: Job.token_digest("lease"))
+    JobExecution.start_for!(job:, worker:).finalize!(outcome: "completed",
+      usage: UsageReport.normalize(total_tokens: 9, llm_model: "provider-llm", duration_ms: 30))
+
+    get hosting_path
+
+    assert_response :success
+    assert_select ".usage-summary", text: /Usage.*30 days.*9/m
+    assert_select "table", text: /Meter worker.*provider-llm.*Private.*Completed.*9.*30 ms/m
+    assert_no_match "do not show", response.body
+  end
 end
