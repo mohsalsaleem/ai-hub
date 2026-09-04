@@ -10,7 +10,23 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_140000) do
+  create_table "credit_ledger_entries", force: :cascade do |t|
+    t.bigint "amount", null: false
+    t.datetime "created_at", null: false
+    t.string "entry_type", null: false
+    t.integer "job_execution_id", null: false
+    t.integer "organization_id"
+    t.string "organization_name"
+    t.integer "pricing_version", null: false
+    t.string "unit", default: "internal_credit", null: false
+    t.datetime "updated_at", null: false
+    t.index ["job_execution_id", "entry_type"], name: "index_credit_ledger_entries_on_job_execution_id_and_entry_type", unique: true
+    t.index ["job_execution_id"], name: "index_credit_ledger_entries_on_job_execution_id"
+    t.index ["organization_id", "created_at"], name: "index_credit_ledger_entries_on_organization_id_and_created_at"
+    t.index ["organization_id"], name: "index_credit_ledger_entries_on_organization_id"
+  end
+
   create_table "hub_applications", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
@@ -298,6 +314,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_130000) do
     t.index ["token_digest"], name: "index_workers_on_token_digest", unique: true
   end
 
+  add_foreign_key "credit_ledger_entries", "job_executions"
+  add_foreign_key "credit_ledger_entries", "organizations"
   add_foreign_key "hub_applications", "organizations"
   add_foreign_key "hub_applications", "worker_pools"
   add_foreign_key "job_executions", "jobs"

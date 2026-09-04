@@ -8,18 +8,18 @@ lands, changes scope, or is deliberately deferred.
 
 ### Milestone 5: Metering and rewards
 
-Status: Immutable execution metering verified locally, pending commit
+Status: Metering deployed; internal credit ledger in progress
 
 | Work item | Status | Notes |
 | --- | --- | --- |
-| Per-attempt execution record | Complete locally | Every claim, retry, and lease expiry receives separate outcome evidence. |
-| Canonical usage report | Complete locally | Token aliases are normalized, totals are recomputed, and values are bounded. |
-| Finalized immutability | Complete locally | Terminal evidence cannot be updated or destroyed through application models. |
-| Consumer usage view | Complete locally | Run details show attempts, tokens, and duration without provider worker or model identity. |
-| Provider usage view | Complete locally | Hosting shows 30-day contribution and recent executions without consumer payloads. |
-| Platform usage view | Complete locally | Operations shows shared usage without prompts or responses. |
-| Credits and balances | Pending | Starts only after execution records are verified. |
-| Pricing and platform share | Deferred | Requires explicit charging policy and ledger reconciliation. |
+| Per-attempt execution record | Complete | Every claim, retry, and lease expiry receives separate outcome evidence. |
+| Canonical usage report | Complete | Token aliases are normalized, totals are recomputed, values are bounded, and the provider model is stored as `llm_model`. |
+| Finalized immutability | Complete | Terminal evidence cannot be updated or destroyed through application models. |
+| Consumer usage view | Complete | Run details show attempts, tokens, and duration without provider worker or model identity. |
+| Provider usage view | Complete | Hosting shows 30-day contribution, recent executions, and LLM model identity without consumer payloads. |
+| Platform usage view | Complete | Operations shows shared usage without prompts or responses. |
+| Credits and balances | In progress | Append-only balanced entries are posted for billable shared executions. |
+| Pricing and platform share | In progress | Version 1 charges one internal credit per reported token and assigns 80% to the provider and 20% to AI Hub. |
 | Payments and payouts | Deferred | Begins only after internal credits reconcile reliably. |
 
 ### Milestone 4: Shared pools
@@ -105,9 +105,13 @@ Status: Complete and committed
 | 2026-09-04 | Metering RuboCop | 134 files, no offenses. |
 | 2026-09-04 | Metering Brakeman | 79 checks, no security warnings. |
 | 2026-09-04 | Metering browser check | Consumer run usage, provider contribution, platform shared usage, payload boundaries, and browsable docs verified locally. |
+| 2026-09-04 | Worker 0.3 local restart | LaunchAgent restarted and verified running with the `llm_model` usage contract. |
+| 2026-09-04 | Metering commit | `6021d57 Add execution metering foundation` pushed to `main`. |
+| 2026-09-04 | Metering production deployment | Coolify deployment finished on `6021d57`; `/up`, public metering docs, and worker polling verified. |
+| 2026-09-04 | Credit ledger foundation checks | 111 tests, 550 assertions, no failures; 139 files pass RuboCop; Brakeman reports no warnings. |
 
 ## Next work
 
-1. Commit and deploy metering with worker 0.3.
-2. Define charging policy for success, failure, retry, and lease expiry.
-3. Add an append-only internal credit ledger with reconciliation checks.
+1. Complete and verify the internal credit ledger and reconciliation checks.
+2. Add consumer and provider balance views.
+3. Keep payments and payouts deferred until ledger reconciliation is proven in production.

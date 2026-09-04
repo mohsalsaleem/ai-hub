@@ -338,6 +338,15 @@ until these records are proven reliable.
 - Add consumer spending limits and provider earning reports.
 - Add payments and payouts only after reconciliation is reliable.
 
+The first internal charging policy applies only to completed cross-organization
+executions with provider-reported token usage. Each reported token creates one
+internal-credit consumer debit, split into an 80% provider credit and a 20%
+platform credit. Failed attempts, retryable failures, expired leases, private
+runs, and executions without usage are uncharged. Amounts are integers; the
+platform share rounds down and the provider receives the remainder. Pricing is
+versioned on every immutable ledger entry so later policy changes never rewrite
+historical balances. Internal credits have no cash value in this phase.
+
 Acceptance criteria:
 
 - Every balance change can be traced to an immutable run and ledger entry.

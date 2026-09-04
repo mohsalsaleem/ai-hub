@@ -6,6 +6,7 @@ class JobExecution < ApplicationRecord
   belongs_to :worker_pool, optional: true
   belongs_to :consumer_organization, class_name: "Organization", inverse_of: :consumed_job_executions
   belongs_to :provider_organization, class_name: "Organization", inverse_of: :provided_job_executions
+  has_many :credit_ledger_entries, dependent: :restrict_with_error
 
   validates :attempt_number, numericality: { only_integer: true, greater_than: 0 },
     uniqueness: { scope: :job_id }
@@ -41,8 +42,11 @@ class JobExecution < ApplicationRecord
   def finalize!(outcome:, usage: UsageReport.normalize(nil), failure_code: nil, finished_at: Time.current)
     raise ActiveRecord::RecordNotSaved, "Execution is already finalized" if finalized?
 
-    update!(usage.merge(outcome:, failure_code: failure_code.to_s.first(100).presence, finished_at:,
-      hub_duration_ms: [ ((finished_at - started_at) * 1000).round, 0 ].max))
+    transaction do
+      update!(usage.merge(outcome:, failure_code: failure_code.to_s.first(100).presence, finished_at:,
+        hub_duration_ms: [ ((finished_at - started_at) * 1000).round, 0 ].max))
+      ExecutionCharger.post!(self)
+    end
   end
 
   private

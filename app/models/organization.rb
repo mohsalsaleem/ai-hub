@@ -12,6 +12,7 @@ class Organization < ApplicationRecord
     foreign_key: :consumer_organization_id, inverse_of: :consumer_organization, dependent: :restrict_with_error
   has_many :provided_job_executions, class_name: "JobExecution",
     foreign_key: :provider_organization_id, inverse_of: :provider_organization, dependent: :restrict_with_error
+  has_many :credit_ledger_entries, dependent: :restrict_with_error
 
   validates :name, presence: true, length: { maximum: 100 }
   validates :slug, presence: true, uniqueness: true,
