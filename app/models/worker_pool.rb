@@ -3,6 +3,8 @@ class WorkerPool < ApplicationRecord
   has_many :worker_pool_memberships, dependent: :destroy
   has_many :workers, through: :worker_pool_memberships
   has_many :hub_applications, dependent: :nullify
+  has_many :jobs, dependent: :nullify
+  has_many :routing_decisions, dependent: :nullify
 
   validates :name, presence: true, length: { maximum: 100 }
   validates :slug, presence: true, uniqueness: { scope: :organization_id },

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_03_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_091000) do
   create_table "hub_applications", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
@@ -40,19 +40,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_200000) do
     t.string "lease_token_digest"
     t.datetime "leased_until"
     t.integer "max_attempts", default: 5, null: false
+    t.string "minimum_worker_trust", default: "owner", null: false
     t.json "output"
     t.integer "priority", default: 0, null: false
     t.string "public_id", null: false
+    t.string "routing_pool_name"
     t.string "status", default: "queued", null: false
     t.integer "task_definition_id", null: false
     t.datetime "updated_at", null: false
     t.integer "worker_id"
+    t.integer "worker_pool_id"
     t.index ["hub_application_id", "idempotency_key"], name: "index_jobs_on_hub_application_id_and_idempotency_key", unique: true
     t.index ["hub_application_id"], name: "index_jobs_on_hub_application_id"
     t.index ["public_id"], name: "index_jobs_on_public_id", unique: true
     t.index ["status", "available_at", "priority"], name: "index_jobs_for_claiming"
     t.index ["task_definition_id"], name: "index_jobs_on_task_definition_id"
     t.index ["worker_id"], name: "index_jobs_on_worker_id"
+    t.index ["worker_pool_id"], name: "index_jobs_on_worker_pool_id"
   end
 
   create_table "memberships", force: :cascade do |t|
@@ -72,6 +76,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_200000) do
     t.string "slug", null: false
     t.datetime "updated_at", null: false
     t.index ["slug"], name: "index_organizations_on_slug", unique: true
+  end
+
+  create_table "routing_decisions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.json "evidence", default: {}, null: false
+    t.integer "job_id", null: false
+    t.string "outcome", null: false
+    t.string "reason", null: false
+    t.datetime "updated_at", null: false
+    t.integer "worker_id"
+    t.integer "worker_pool_id"
+    t.index ["job_id", "created_at"], name: "index_routing_decisions_on_job_id_and_created_at"
+    t.index ["job_id"], name: "index_routing_decisions_on_job_id"
+    t.index ["worker_id"], name: "index_routing_decisions_on_worker_id"
+    t.index ["worker_pool_id"], name: "index_routing_decisions_on_worker_pool_id"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -192,9 +211,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_200000) do
   add_foreign_key "hub_applications", "worker_pools"
   add_foreign_key "jobs", "hub_applications"
   add_foreign_key "jobs", "task_definitions"
+  add_foreign_key "jobs", "worker_pools", on_delete: :nullify
   add_foreign_key "jobs", "workers"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
+  add_foreign_key "routing_decisions", "jobs"
+  add_foreign_key "routing_decisions", "worker_pools", on_delete: :nullify
+  add_foreign_key "routing_decisions", "workers", on_delete: :nullify
   add_foreign_key "sessions", "users"
   add_foreign_key "task_definitions", "hub_applications"
   add_foreign_key "worker_enrollment_grants", "workers"

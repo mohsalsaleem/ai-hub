@@ -5,17 +5,23 @@ class Job < ApplicationRecord
   belongs_to :hub_application
   belongs_to :task_definition
   belongs_to :worker, optional: true
+  belongs_to :worker_pool, optional: true
+  has_many :routing_decisions, dependent: :destroy
 
   validates :public_id, presence: true, uniqueness: true
   validates :idempotency_key, presence: true, uniqueness: { scope: :hub_application_id }
   validates :status, inclusion: { in: STATUSES }
   validates :max_attempts, numericality: { only_integer: true, in: 1..10 }
+  validates :minimum_worker_trust, inclusion: { in: Worker::TRUST_TIERS }
   validate :input_matches_definition, on: :create
+  validate :routing_pool_matches_application, on: :create
 
   before_validation :set_defaults, on: :create
+  after_create :record_initial_routing_decision
 
   scope :claimable, -> {
-    where("(status = 'queued' AND available_at <= ?) OR (status = 'leased' AND leased_until < ?)", Time.current, Time.current)
+    where("(jobs.status = 'queued' AND jobs.available_at <= ?) OR (jobs.status = 'leased' AND jobs.leased_until < ?)",
+      Time.current, Time.current).where("jobs.attempts < jobs.max_attempts")
   }
 
   def lease_valid?(plaintext)
@@ -32,11 +38,26 @@ class Job < ApplicationRecord
   def set_defaults
     self.public_id ||= "job_#{SecureRandom.hex(12)}"
     self.available_at ||= Time.current
+    self.worker_pool = hub_application&.worker_pool
+    self.routing_pool_name = worker_pool&.name
+    self.minimum_worker_trust = hub_application&.minimum_worker_trust
+  end
+
+  def record_initial_routing_decision
+    routing_decisions.create!(outcome: "queued", reason: "awaiting_eligible_capacity", worker_pool:,
+      evidence: { minimum_worker_trust:, routing_pool: { id: worker_pool_id, name: routing_pool_name },
+                  required_capabilities: WorkerEligibility.required_capabilities(self) })
   end
 
   def input_matches_definition
     return unless task_definition && input
 
     errors.add(:input, "does not match task schema") unless JSONSchemer.schema(task_definition.input_schema).valid?(input)
+  end
+
+  def routing_pool_matches_application
+    return if worker_pool.nil? || worker_pool.organization_id == hub_application&.organization_id
+
+    errors.add(:worker_pool, "must belong to the application organization")
   end
 end

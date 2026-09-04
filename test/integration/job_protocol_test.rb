@@ -54,6 +54,8 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
 
     get api_v1_job_path(job_id), headers: application_headers
     assert_equal "queued", response.parsed_body.fetch("status")
+    assert response.parsed_body.dig("routing", "code").present?
+    assert_not response.parsed_body.to_json.include?(@worker.name)
   end
 
   test "worker claims, resolves a cached definition, and completes a job" do
@@ -64,6 +66,9 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
     claim = response.parsed_body
     assert_equal job.public_id, claim.dig("job", "id")
     assert_equal @definition.digest, claim.dig("job", "task_digest")
+    decision = job.reload.routing_decisions.selected.sole
+    assert_equal @worker, decision.worker
+    assert_equal true, decision.evidence.dig("checks", "capabilities")
 
     get api_v1_worker_task_definition_path(@definition.digest), headers: worker_headers
     assert_response :success
@@ -94,6 +99,22 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
       params: { lease_token: lease, output: { wrong: true } }
     assert_response :unprocessable_entity
     assert_equal "leased", job.reload.status
+  end
+
+  test "an expired final lease becomes dead without another selection record" do
+    job = @application.jobs.create!(task_definition: @definition, idempotency_key: "last-attempt",
+      input: { text: "Hello" }, max_attempts: 1)
+    post api_v1_worker_claims_path, headers: worker_headers, as: :json
+    assert_equal job.public_id, response.parsed_body.dig("job", "id")
+
+    travel Job::LEASE_SECONDS.seconds + 1.second do
+      post api_v1_worker_claims_path, headers: worker_headers, as: :json
+      assert_nil response.parsed_body["job"]
+    end
+
+    assert_equal "dead", job.reload.status
+    assert_equal "lease_expired", job.error.fetch("code")
+    assert_equal 2, job.routing_decisions.count
   end
 
   test "retryable failures return jobs to the queue with backoff" do
@@ -181,8 +202,11 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
     assert_nil response.parsed_body["job"]
 
     @application.update!(minimum_worker_trust: "verified")
+    eligible_job = @application.jobs.create!(task_definition: @definition,
+      idempotency_key: "lower-trust-opt-in", input: { text: "Allowed" })
     post api_v1_worker_claims_path, params: { wait_seconds: 0 }, headers: worker_headers, as: :json
-    assert_equal job.public_id, response.parsed_body.dig("job", "id")
+    assert_equal eligible_job.public_id, response.parsed_body.dig("job", "id")
+    assert_equal "owner", job.reload.minimum_worker_trust
   end
 
   test "worker pools restrict claims after trust checks pass" do
@@ -198,6 +222,38 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
     @worker.worker_pools << allowed_pool
     post api_v1_worker_claims_path, params: { wait_seconds: 0 }, headers: worker_headers, as: :json
     assert_equal job.public_id, response.parsed_body.dig("job", "id")
+    assert_equal allowed_pool, job.reload.worker_pool
+  end
+
+  test "application routing changes do not alter queued runs" do
+    original_pool = @organization.worker_pools.create!(name: "Original pool")
+    replacement_pool = @organization.worker_pools.create!(name: "Replacement pool")
+    @worker.worker_pools << original_pool
+    @application.update!(worker_pool: original_pool)
+    job = @application.jobs.create!(task_definition: @definition,
+      idempotency_key: "routing-snapshot", input: { text: "Private" })
+
+    @application.update!(worker_pool: replacement_pool)
+    post api_v1_worker_claims_path, params: { wait_seconds: 0 }, headers: worker_headers, as: :json
+
+    assert_equal job.public_id, response.parsed_body.dig("job", "id")
+    assert_equal original_pool, job.reload.worker_pool
+    assert_equal %w[queued selected], job.routing_decisions.order(:created_at).pluck(:outcome)
+  end
+
+  test "removing a pool does not broaden its queued runs to automatic routing" do
+    pool = @organization.worker_pools.create!(name: "Temporary pool")
+    @application.update!(worker_pool: pool)
+    job = @application.jobs.create!(task_definition: @definition,
+      idempotency_key: "removed-pool", input: { text: "Private" })
+
+    pool.destroy!
+    post api_v1_worker_claims_path, params: { wait_seconds: 0 }, headers: worker_headers, as: :json
+
+    assert_nil response.parsed_body["job"]
+    assert_nil job.reload.worker_pool_id
+    assert_equal "Temporary pool", job.routing_pool_name
+    assert_equal "no_capacity", RoutingDiagnosis.new(job).call.code
   end
 
   test "enrolled workers require signed requests" do

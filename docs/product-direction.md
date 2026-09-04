@@ -259,6 +259,12 @@ Acceptance criteria:
 - Add a bounded router decision record with eligibility and selection reasons.
 - Preserve existing trust and capability checks.
 
+Routing evidence is deliberately compact. A run records one queued decision
+when submitted and at most one selected decision per allowed attempt. Evidence
+contains the policy checks and required capabilities, not the input, output, or
+model response. Consumer APIs expose the pool and a general routing explanation
+but never the selected worker identity.
+
 Acceptance criteria:
 
 - A run is claimed only by a compatible worker in the selected pool.

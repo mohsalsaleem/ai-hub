@@ -39,8 +39,10 @@ module Api
       end
 
       def job_json(job)
+        diagnosis = RoutingDiagnosis.new(job).call
         { id: job.public_id, status: job.status, task: job.task_definition.reference,
           attempts: job.attempts, output: job.output, error: job.error,
+          routing: { pool: job.routing_pool_name, code: diagnosis.code, summary: diagnosis.summary },
           created_at: job.created_at&.iso8601, completed_at: job.completed_at&.iso8601 }
       end
     end

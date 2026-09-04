@@ -7,7 +7,8 @@ class JobsController < ApplicationController
   end
 
   def show
-    @job = current_organization.jobs.includes(:hub_application, :task_definition, :worker)
+    @job = current_organization.jobs.includes(:hub_application, :task_definition, :worker_pool, :routing_decisions)
       .find_by!(public_id: params[:id])
+    @routing_diagnosis = RoutingDiagnosis.new(@job).call
   end
 end
