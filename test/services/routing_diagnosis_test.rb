@@ -40,4 +40,17 @@ class RoutingDiagnosisTest < ActiveSupport::TestCase
     assert_equal "capacity_selected", diagnosis.code
     assert_not_includes diagnosis.summary, worker.name
   end
+
+  test "distinguishes paused and busy compatible capacity" do
+    worker, = Worker.issue!(organization: @organization, name: "Home worker",
+      capabilities: [ "structured_generation" ], last_seen_at: Time.current, paused_at: Time.current)
+    job = @application.jobs.create!(task_definition: @definition, idempotency_key: "waiting", input: {})
+
+    assert_equal "capacity_paused", RoutingDiagnosis.new(job).call.code
+
+    worker.update!(paused_at: nil)
+    worker.jobs.create!(hub_application: @application, task_definition: @definition,
+      idempotency_key: "active", input: {}, status: "leased", leased_until: 1.minute.from_now)
+    assert_equal "capacity_busy", RoutingDiagnosis.new(job).call.code
+  end
 end

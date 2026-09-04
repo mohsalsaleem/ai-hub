@@ -17,6 +17,8 @@ Rails.application.routes.draw do
   resources :jobs, only: %i[index show]
   resources :workers, only: %i[index create update destroy] do
     post :rotate_token, on: :member
+    post :pause, on: :member
+    post :resume, on: :member
   end
   resources :worker_pools, only: %i[create destroy]
   get "dashboard", to: "dashboard#show", as: :dashboard

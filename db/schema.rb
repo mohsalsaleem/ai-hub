@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_091000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_100000) do
   create_table "hub_applications", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
@@ -185,6 +185,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_091000) do
 
   create_table "workers", force: :cascade do |t|
     t.boolean "active", default: true, null: false
+    t.json "availability_days", default: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"], null: false
+    t.string "availability_ends_at"
+    t.string "availability_starts_at"
+    t.string "availability_timezone", default: "UTC", null: false
     t.json "capabilities", default: [], null: false
     t.datetime "created_at", null: false
     t.datetime "enrolled_at"
@@ -192,9 +196,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_091000) do
     t.string "key_fingerprint"
     t.datetime "last_seen_at"
     t.json "latest_metrics", default: {}, null: false
+    t.integer "max_concurrent_jobs", default: 1, null: false
     t.datetime "metrics_reported_at"
     t.string "name", null: false
     t.integer "organization_id", null: false
+    t.string "participation_mode", default: "private", null: false
+    t.datetime "paused_at"
     t.text "public_key_pem"
     t.string "reported_id"
     t.string "token_digest", null: false

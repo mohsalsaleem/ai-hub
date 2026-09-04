@@ -11,7 +11,8 @@ class WorkerPoolsController < ApplicationController
   def destroy
     pool = current_organization.worker_pools.find(params[:id])
     pool.destroy!
-    redirect_to hosting_path, notice: "Worker pool removed. Applications using it now allow any eligible worker."
+    redirect_to hosting_path,
+      notice: "Worker pool removed. Future runs use automatic routing; existing queued runs remain bound."
   end
 
   private

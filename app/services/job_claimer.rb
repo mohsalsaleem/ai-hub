@@ -6,6 +6,8 @@ class JobClaimer
   def claim
     Job.transaction do
       expire_exhausted_leases
+      return unless @worker.accepting_jobs?
+
       job = eligible_jobs
         .merge(Job.claimable).includes(:task_definition)
         .order(priority: :desc, created_at: :asc).limit(50)
@@ -21,6 +23,8 @@ class JobClaimer
         worker: @worker, worker_pool: job.worker_pool,
         evidence: { attempt: job.attempts, worker: { id: @worker.id, name: @worker.name },
                     routing_pool: { id: job.worker_pool_id, name: job.routing_pool_name },
+                    provider_policy: { participation_mode: @worker.participation_mode,
+                                       max_concurrent_jobs: @worker.max_concurrent_jobs },
                     checks: eligibility.checks(job),
                     required_capabilities: eligibility.required_capabilities(job) })
       [ job, plaintext ]

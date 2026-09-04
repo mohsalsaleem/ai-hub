@@ -2,6 +2,9 @@ class Worker < ApplicationRecord
   include TokenAuthenticatable
 
   TRUST_TIERS = %w[external verified organization owner].freeze
+  PARTICIPATION_MODES = %w[private shared].freeze
+  AVAILABILITY_DAYS = %w[monday tuesday wednesday thursday friday saturday sunday].freeze
+  TIME_PATTERN = /\A(?:[01]\d|2[0-3]):[0-5]\d\z/
 
   belongs_to :organization
   has_many :jobs, dependent: :nullify
@@ -14,6 +17,13 @@ class Worker < ApplicationRecord
 
   validates :name, presence: true
   validates :trust_tier, inclusion: { in: TRUST_TIERS }
+  validates :participation_mode, inclusion: { in: PARTICIPATION_MODES }
+  validates :availability_timezone, inclusion: { in: ActiveSupport::TimeZone.all.map(&:name) }
+  validates :availability_days, presence: true
+  validates :max_concurrent_jobs, numericality: { only_integer: true, in: 1..100 }
+  validate :availability_days_are_valid
+  validate :availability_window_is_valid
+  before_validation :normalize_availability_policy
 
   def trust_rank = TRUST_TIERS.index(trust_tier)
 
@@ -68,4 +78,87 @@ class Worker < ApplicationRecord
   end
 
   def online? = last_seen_at.present? && last_seen_at > 2.minutes.ago
+
+  def paused? = paused_at.present?
+
+  def accepting_jobs?(now: Time.current)
+    active? && !paused? && scheduled_available_at?(now) && active_lease_count(now:) < max_concurrent_jobs
+  end
+
+  def participation_state(now: Time.current)
+    return "revoked" unless active?
+    return "paused" if paused?
+    return "scheduled_offline" unless scheduled_available_at?(now)
+    return "offline" unless online?
+    return "busy" if active_lease_count(now:) >= max_concurrent_jobs
+
+    "available"
+  end
+
+  def active_lease_count(now: Time.current)
+    jobs.where(status: "leased").where("leased_until > ?", now).count
+  end
+
+  def scheduled_available_at?(time = Time.current)
+    local_time = time.in_time_zone(availability_timezone)
+    return availability_days.include?(local_time.strftime("%A").downcase) if all_day_schedule?
+
+    minute = local_time.hour * 60 + local_time.min
+    start_minute = minutes_since_midnight(availability_starts_at)
+    end_minute = minutes_since_midnight(availability_ends_at)
+    schedule_day = if start_minute > end_minute && minute < end_minute
+      (local_time.to_date - 1.day).strftime("%A").downcase
+    else
+      local_time.strftime("%A").downcase
+    end
+
+    availability_days.include?(schedule_day) && within_window?(minute, start_minute, end_minute)
+  end
+
+  def availability_summary
+    days = availability_days == AVAILABILITY_DAYS ? "Every day" : availability_days.map { |day| day.first(3).capitalize }.join(", ")
+    window = all_day_schedule? ? "all day" : "#{availability_starts_at} to #{availability_ends_at}"
+    "#{days}, #{window} (#{availability_timezone})"
+  end
+
+  private
+
+  def normalize_availability_policy
+    self.availability_days = Array(availability_days).compact_blank.uniq
+    self.availability_starts_at = availability_starts_at.presence
+    self.availability_ends_at = availability_ends_at.presence
+  end
+
+  def availability_days_are_valid
+    invalid_days = Array(availability_days) - AVAILABILITY_DAYS
+    errors.add(:availability_days, "contains invalid days") if invalid_days.any?
+  end
+
+  def availability_window_is_valid
+    values = [ availability_starts_at, availability_ends_at ]
+    return if values.all?(&:blank?)
+
+    if values.any?(&:blank?)
+      errors.add(:availability_starts_at, "and end time must both be set")
+    elsif values.any? { |value| !TIME_PATTERN.match?(value) }
+      errors.add(:availability_starts_at, "and end time must use HH:MM")
+    elsif availability_starts_at == availability_ends_at
+      errors.add(:availability_ends_at, "must differ from the start time")
+    end
+  end
+
+  def all_day_schedule? = availability_starts_at.blank? && availability_ends_at.blank?
+
+  def minutes_since_midnight(value)
+    hour, minute = value.split(":").map(&:to_i)
+    hour * 60 + minute
+  end
+
+  def within_window?(minute, start_minute, end_minute)
+    if start_minute < end_minute
+      minute >= start_minute && minute < end_minute
+    else
+      minute >= start_minute || minute < end_minute
+    end
+  end
 end

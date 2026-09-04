@@ -279,6 +279,12 @@ Acceptance criteria:
 - Add concurrency and basic usage limits.
 - Add provider views for submitted capacity and served runs.
 
+The first participation slice keeps routing organization-local. A provider can
+mark capacity as shared, but this records intent only until shared pool grants
+exist. AI Hub enforces manual pause, local-time availability windows, and
+concurrency limits before a worker can claim a run. Pausing affects new claims
+and does not invalidate a lease that is already running.
+
 Acceptance criteria:
 
 - A private worker never receives shared runs.

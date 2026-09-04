@@ -20,7 +20,18 @@ class RoutingDiagnosis
 
     workers = workers.select { |worker| WorkerEligibility.new(worker).eligible_for?(@job) }
     return diagnosis("capabilities_unavailable", "This pool does not currently offer the capabilities required by the task.") if workers.empty?
-    return diagnosis("eligible_capacity_offline", "Compatible capacity exists but is not currently online.") unless workers.any?(&:online?)
+
+    available_workers = workers.reject(&:paused?)
+    return diagnosis("capacity_paused", "Compatible capacity is manually paused.") if available_workers.empty?
+
+    available_workers = available_workers.select { |worker| worker.scheduled_available_at? }
+    return diagnosis("scheduled_offline", "Compatible capacity is outside its configured availability schedule.") if available_workers.empty?
+    return diagnosis("eligible_capacity_offline", "Compatible capacity exists but is not currently online.") unless available_workers.any?(&:online?)
+
+    available_workers = available_workers.select do |worker|
+      worker.active_lease_count < worker.max_concurrent_jobs
+    end
+    return diagnosis("capacity_busy", "Compatible capacity is currently at its concurrency limit.") if available_workers.empty?
 
     diagnosis("awaiting_claim", "Compatible capacity is available and the run is awaiting a claim.")
   end

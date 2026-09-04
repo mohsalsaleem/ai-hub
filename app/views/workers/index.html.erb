@@ -19,7 +19,7 @@
     <div><span class="overline">Worker pools</span><p>Applications can route runs through one pool.</p></div>
     <div class="pool-list">
       <% @worker_pools.each do |pool| %>
-        <span class="pool-pill"><%= pool.name %><small><%= pool.workers.count %></small><% if owner? %><%= button_to "×", worker_pool_path(pool), method: :delete, aria: { label: "Remove #{pool.name}" }, data: { turbo_confirm: "Remove this pool? Applications using it will allow any eligible worker." } %><% end %></span>
+        <span class="pool-pill"><%= pool.name %><small><%= pool.workers.count %></small><% if owner? %><%= button_to "×", worker_pool_path(pool), method: :delete, aria: { label: "Remove #{pool.name}" }, data: { turbo_confirm: "Remove this pool? Future runs will use automatic routing. Existing queued runs will remain bound to this pool." } %><% end %></span>
       <% end %>
     </div>
   </section>
@@ -27,13 +27,15 @@
 
 <div class="worker-grid">
   <% @workers.each do |worker| %>
+    <% participation_state = worker.participation_state %>
     <article class="worker-card" id="worker-<%= worker.id %>">
       <div class="worker-head">
-        <div><span class="status-dot <%= worker.online? ? 'is-online' : 'is-offline' %>"></span><h2><%= worker.name %></h2></div>
-        <%= status_badge(worker.online? ? "online" : "offline") %>
+        <div><span class="status-dot <%= participation_state.in?(%w[available busy]) ? 'is-online' : 'is-offline' %>"></span><h2><%= worker.name %></h2></div>
+        <%= status_badge(participation_state) %>
       </div>
-      <div class="worker-meta"><span><%= worker.version || "Version unknown" %></span><span><%= number_with_delimiter(worker.jobs.count) %> runs served</span></div>
+      <div class="worker-meta"><span><%= worker.version || "Version unknown" %></span><span><%= number_with_delimiter(worker.jobs.count) %> runs served</span><span><%= worker.active_lease_count %> / <%= worker.max_concurrent_jobs %> active</span></div>
       <div class="chip-row">
+        <span class="chip"><%= worker.participation_mode.humanize %> capacity</span>
         <span class="chip"><%= worker_trust_label(worker.trust_tier) %></span>
         <span class="chip"><%= worker.enrolled? ? "Signed identity" : "Token identity" %></span>
         <% worker.worker_pools.each do |pool| %><span class="chip chip-neutral"><%= pool.name %></span><% end %>
@@ -41,23 +43,38 @@
       </div>
       <% if worker.enrolled? %><p class="last-seen">Key: <span class="mono"><%= worker.key_fingerprint.first(12) %></span> · enrolled <%= time_ago_in_words(worker.enrolled_at) %> ago</p><% end %>
       <% if !worker.enrolled? && (grant = worker.worker_enrollment_grants.select(&:usable?).max_by(&:expires_at)) %><p class="last-seen">Enrollment grant expires <%= time_ago_in_words(grant.expires_at) %> from now</p><% end %>
+      <p class="last-seen">Schedule: <%= worker.availability_summary %></p>
       <p class="last-seen">Last activity: <%= worker.last_seen_at ? time_ago_in_words(worker.last_seen_at) + " ago" : "never" %></p>
       <% if owner? && worker.active? %>
         <div class="card-actions">
-          <button class="text-button" type="button" onclick="document.getElementById('worker-settings-<%= worker.id %>').showModal()">Routing</button>
+          <button class="text-button" type="button" onclick="document.getElementById('worker-settings-<%= worker.id %>').showModal()">Configure</button>
+          <% if worker.paused? %>
+            <%= button_to "Resume", resume_worker_path(worker), method: :post, class: "text-button" %>
+          <% else %>
+            <%= button_to "Pause", pause_worker_path(worker), method: :post, class: "text-button" %>
+          <% end %>
           <%= button_to "Rotate token", rotate_token_worker_path(worker), method: :post, class: "text-button", data: { turbo_confirm: "Rotate the token and reset this worker identity?" } %>
           <%= button_to "Revoke", worker_path(worker), method: :delete, class: "text-button danger", data: { turbo_confirm: "Revoke this worker?" } %>
         </div>
         <dialog id="worker-settings-<%= worker.id %>" class="dialog">
           <form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form>
-          <h2>Route to <%= worker.name %></h2>
-          <p>Set who operates this worker and which pools may route runs to it.</p>
+          <h2>Configure <%= worker.name %></h2>
+          <p>Control how this model capacity participates and when it may accept runs.</p>
           <%= form_with model: worker, class: "stack-form" do |form| %>
+            <label>Participation<%= form.select :participation_mode, options_for_select(worker_participation_options, worker.participation_mode) %><small>Shared capacity is prepared for future shared pools. It remains organization-only today.</small></label>
             <label>Trust level<%= form.select :trust_tier, options_for_select(worker_trust_options, worker.trust_tier) %><small>Applications must explicitly allow this trust level.</small></label>
+            <label>Maximum concurrent runs<%= form.number_field :max_concurrent_jobs, min: 1, max: 100, required: true %></label>
             <% if @worker_pools.any? %>
               <fieldset class="check-list"><legend>Pool membership</legend><%= form.collection_check_boxes :worker_pool_ids, @worker_pools, :id, :name do |box| %><label><%= box.check_box %><span><%= box.text %></span></label><% end %></fieldset>
             <% end %>
-            <%= form.submit "Save routing", class: "button" %>
+            <fieldset class="check-list day-list"><legend>Available days</legend><%= form.collection_check_boxes :availability_days, Worker::AVAILABILITY_DAYS, :to_s, :humanize do |box| %><label><%= box.check_box %><span><%= box.text %></span></label><% end %></fieldset>
+            <label>Schedule timezone<%= form.time_zone_select :availability_timezone, nil, default: worker.availability_timezone %></label>
+            <div class="schedule-grid">
+              <label>Start time<%= form.time_field :availability_starts_at %></label>
+              <label>End time<%= form.time_field :availability_ends_at %></label>
+            </div>
+            <small>Leave both times blank for all-day availability. Overnight windows are supported.</small>
+            <%= form.submit "Save configuration", class: "button" %>
           <% end %>
           <% if worker.worker_identity_events.any? %><details class="audit-trail"><summary>Identity activity</summary><ol><% worker.worker_identity_events.sort_by(&:created_at).reverse.first(5).each do |event| %><li><span><%= event.event_type.humanize %></span><time datetime="<%= event.created_at.iso8601 %>"><%= time_ago_in_words(event.created_at) %> ago</time></li><% end %></ol></details><% end %>
         </dialog>
@@ -70,7 +87,7 @@
 <dialog id="worker-form" class="dialog">
   <form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form>
   <h2>Issue worker token</h2>
-  <p>Name the runtime, set who operates it, and optionally assign routing pools.</p>
+  <p>Name the runtime, set who operates it, and optionally assign routing pools. New workers start as private, always-available capacity.</p>
   <%= form_with model: @worker, url: workers_path, class: "stack-form" do |form| %>
     <label>Worker name<%= form.text_field :name, required: true, autofocus: true, placeholder: "Home model worker" %></label>
     <label>Trust level<%= form.select :trust_tier, options_for_select(worker_trust_options, "owner") %></label>

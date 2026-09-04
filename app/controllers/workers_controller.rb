@@ -1,6 +1,6 @@
 class WorkersController < ApplicationController
   before_action :require_owner!
-  before_action :set_worker, only: %i[update destroy rotate_token]
+  before_action :set_worker, only: %i[update destroy rotate_token pause resume]
 
   def index
     @workers = current_organization.workers.includes(:worker_pools, :worker_enrollment_grants,
@@ -24,12 +24,24 @@ class WorkersController < ApplicationController
   def update
     previous_trust = @worker.trust_tier
     previous_pool_ids = @worker.worker_pool_ids.sort
-    @worker.update!(trust_tier: worker_params.fetch(:trust_tier), worker_pools: selected_pools)
+    @worker.update!(worker_params.except(:worker_pool_ids).to_h.merge(worker_pools: selected_pools))
     @worker.record_identity_event!("trust_changed", from: previous_trust, to: @worker.trust_tier) if previous_trust != @worker.trust_tier
     if previous_pool_ids != @worker.worker_pool_ids.sort
       @worker.record_identity_event!("pools_changed", pool_ids: @worker.worker_pool_ids.sort)
     end
-    redirect_to hosting_path(anchor: "worker-#{@worker.id}"), notice: "Worker routing settings updated."
+    redirect_to hosting_path(anchor: "worker-#{@worker.id}"), notice: "Worker configuration updated."
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to hosting_path(anchor: "worker-#{@worker.id}"), alert: e.record.errors.full_messages.to_sentence
+  end
+
+  def pause
+    @worker.update!(paused_at: Time.current)
+    redirect_to hosting_path(anchor: "worker-#{@worker.id}"), notice: "Worker participation paused."
+  end
+
+  def resume
+    @worker.update!(paused_at: nil)
+    redirect_to hosting_path(anchor: "worker-#{@worker.id}"), notice: "Worker participation resumed."
   end
 
   def rotate_token
@@ -47,6 +59,9 @@ class WorkersController < ApplicationController
   private
 
   def set_worker = @worker = current_organization.workers.find(params[:id])
-  def worker_params = params.require(:worker).permit(:name, :trust_tier, worker_pool_ids: [])
+  def worker_params
+    params.require(:worker).permit(:name, :trust_tier, :participation_mode, :availability_timezone,
+      :availability_starts_at, :availability_ends_at, :max_concurrent_jobs, worker_pool_ids: [], availability_days: [])
+  end
   def selected_pools = current_organization.worker_pools.where(id: worker_params.fetch(:worker_pool_ids, []).compact_blank)
 end

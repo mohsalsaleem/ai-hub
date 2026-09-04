@@ -180,6 +180,65 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
     assert_nil response.parsed_body["job"]
   end
 
+  test "paused workers stop claiming until resumed" do
+    job = @application.jobs.create!(task_definition: @definition,
+      idempotency_key: "paused-worker", input: { text: "Private" })
+    @worker.update!(paused_at: Time.current)
+
+    post api_v1_worker_claims_path, headers: worker_headers, as: :json
+    assert_nil response.parsed_body["job"]
+
+    @worker.update!(paused_at: nil)
+    post api_v1_worker_claims_path, headers: worker_headers, as: :json
+    assert_equal job.public_id, response.parsed_body.dig("job", "id")
+  end
+
+  test "pausing does not interrupt an active lease" do
+    job = @application.jobs.create!(task_definition: @definition,
+      idempotency_key: "pause-active-lease", input: { text: "Private" })
+    post api_v1_worker_claims_path, headers: worker_headers, as: :json
+    lease_token = response.parsed_body.fetch("lease_token")
+    @worker.update!(paused_at: Time.current)
+
+    post api_v1_worker_job_complete_path(job.public_id), headers: worker_headers, as: :json,
+      params: { lease_token:, output: { title: "Complete" } }
+
+    assert_response :success
+    assert_equal "completed", job.reload.status
+  end
+
+  test "workers claim only inside their availability schedule" do
+    job = @application.jobs.create!(task_definition: @definition,
+      idempotency_key: "scheduled-worker", input: { text: "Private" })
+    @worker.update!(availability_timezone: "UTC", availability_days: [ "monday" ],
+      availability_starts_at: "09:00", availability_ends_at: "10:00")
+
+    travel_to Time.utc(2026, 9, 8, 9, 30) do
+      post api_v1_worker_claims_path, headers: worker_headers, as: :json
+      assert_nil response.parsed_body["job"]
+    end
+
+    travel_to Time.utc(2026, 9, 7, 9, 30) do
+      post api_v1_worker_claims_path, headers: worker_headers, as: :json
+      assert_equal job.public_id, response.parsed_body.dig("job", "id")
+    end
+  end
+
+  test "workers do not claim above their concurrency limit" do
+    @application.jobs.create!(task_definition: @definition, idempotency_key: "active-lease",
+      input: { text: "Active" }, worker: @worker, status: "leased", leased_until: 1.minute.from_now)
+    queued = @application.jobs.create!(task_definition: @definition, idempotency_key: "waiting-for-capacity",
+      input: { text: "Waiting" })
+
+    post api_v1_worker_claims_path, headers: worker_headers, as: :json
+    assert_nil response.parsed_body["job"]
+    assert_equal "queued", queued.reload.status
+
+    @worker.update!(max_concurrent_jobs: 2)
+    post api_v1_worker_claims_path, headers: worker_headers, as: :json
+    assert_equal queued.public_id, response.parsed_body.dig("job", "id")
+  end
+
   test "workers never claim another organization's compatible jobs" do
     other_application, = HubApplication.issue!(organization: organizations(:two), name: "Other", slug: "other")
     definition = other_application.task_definitions.create!(key: "other.task", version: 1,

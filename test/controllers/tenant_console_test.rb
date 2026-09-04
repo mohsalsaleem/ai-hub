@@ -87,6 +87,31 @@ class TenantConsoleTest < ActionDispatch::IntegrationTest
     assert_select ".routing-policy", text: /Trusted GPU/
   end
 
+  test "owner configures and pauses provider participation" do
+    worker, = Worker.issue!(organization: organizations(:one), name: "Night GPU")
+
+    patch worker_path(worker), params: { worker: {
+      trust_tier: "owner", participation_mode: "shared", max_concurrent_jobs: 3,
+      availability_timezone: "Abu Dhabi", availability_days: %w[monday tuesday],
+      availability_starts_at: "22:00", availability_ends_at: "06:00", worker_pool_ids: []
+    } }
+
+    worker.reload
+    assert_equal "shared", worker.participation_mode
+    assert_equal 3, worker.max_concurrent_jobs
+    assert_equal %w[monday tuesday], worker.availability_days
+    assert_equal "Abu Dhabi", worker.availability_timezone
+
+    post pause_worker_path(worker)
+    assert worker.reload.paused?
+    post resume_worker_path(worker)
+    assert_not worker.reload.paused?
+
+    get hosting_path
+    assert_response :success
+    assert_select "article#worker-#{worker.id}", text: /Shared capacity.*Mon, Tue, 22:00 to 06:00/m
+  end
+
   test "product entry points expose activity hosting and settings" do
     get activity_path
     assert_response :success

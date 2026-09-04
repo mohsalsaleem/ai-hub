@@ -13,8 +13,8 @@ module ApplicationHelper
 
   def status_badge(status)
     tone = case status.to_s
-    when "completed", "active", "online" then "good"
-    when "failed", "dead", "revoked" then "bad"
+    when "completed", "active", "online", "available" then "good"
+    when "failed", "dead", "revoked", "offline" then "bad"
     else "pending"
     end
     content_tag :span, status.to_s.humanize, class: "badge badge-#{tone}"
@@ -35,5 +35,9 @@ module ApplicationHelper
 
   def worker_trust_label(value)
     worker_trust_options.to_h.invert.fetch(value.to_s, value.to_s.humanize)
+  end
+
+  def worker_participation_options
+    [ [ "Private capacity", "private" ], [ "Shared capacity", "shared" ] ]
   end
 end
