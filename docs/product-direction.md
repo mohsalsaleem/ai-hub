@@ -300,6 +300,14 @@ Acceptance criteria:
 - Add privacy, retention, rate-limit, and abuse controls required for unknown
   operators.
 
+The first shared-pool slice uses provider-owned pools and explicit consumer
+organization grants. A shared pool is not publicly discoverable. The provider
+owns every worker in that pool, while a granted consumer sees only the pool as
+a routing target. Cross-organization claims require the worker to opt into
+shared participation and the application to accept external or verified
+provider trust. Multi-provider and platform-managed pools follow after a
+separate platform operator role exists.
+
 Acceptance criteria:
 
 - Consumers can use an approved shared pool without joining the provider's

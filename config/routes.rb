@@ -20,7 +20,9 @@ Rails.application.routes.draw do
     post :pause, on: :member
     post :resume, on: :member
   end
-  resources :worker_pools, only: %i[create destroy]
+  resources :worker_pools, only: %i[create destroy] do
+    resources :access_grants, controller: "worker_pool_access_grants", only: %i[create destroy]
+  end
   get "dashboard", to: "dashboard#show", as: :dashboard
   get "docs", to: "docs#show", as: :docs
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html

@@ -19,7 +19,7 @@ class HubApplicationsController < ApplicationController
   end
 
   def settings
-    @worker_pools = current_organization.worker_pools.order(:name)
+    @worker_pools = WorkerPool.accessible_to(current_organization).order(:name)
   end
 
   def new

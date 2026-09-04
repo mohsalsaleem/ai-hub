@@ -3,7 +3,9 @@ module Api
     module Worker
       class TaskDefinitionsController < BaseController
         def show
-          definition = current_worker.organization.task_definitions.find_by!(digest: params[:digest], active: true)
+          definition = TaskDefinition.joins(:jobs).where(digest: params[:digest], active: true,
+            jobs: { worker_id: current_worker.id, status: "leased" })
+            .where("jobs.leased_until > ?", Time.current).first!
           render json: {
             key: definition.key, version: definition.version, digest: definition.digest,
             executor: definition.executor, instructions: definition.instructions,

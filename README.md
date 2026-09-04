@@ -24,8 +24,8 @@ Applications -> Rails Hub + SQLite <- long polling -> local worker -> model
 - Official workers enroll a local Ed25519 identity and sign every runtime
   request. Existing unenrolled workers retain bearer-token compatibility.
 - Applications own deterministic validation and business persistence.
-- Organizations are isolated tenants. Applications, definitions, jobs, tokens,
-  and workers are always resolved through the signed-in organization.
+- Organizations are isolated tenants. Cross-organization model work is allowed
+  only through an explicit shared-pool consumer grant.
 - Applications default to owner-operated workers. Owners can explicitly lower
   the minimum trust level and restrict an application to a named worker pool.
 
@@ -178,15 +178,31 @@ SDK configuration, request semantics, timeouts, and operational guidance.
 
 Every worker has an owner-assigned trust level: owner operated, organization
 managed, verified provider, or external provider. Every application has a
-minimum accepted level and may be restricted to one organization-owned worker
-pool. A worker must pass organization isolation, application trust, pool, and
-task capability checks before it can claim a job.
+minimum accepted level and may be restricted to one accessible worker pool. A
+worker must pass organization or shared-pool access, application trust, pool,
+participation, availability, concurrency, and task capability checks before it
+can claim a job.
 
 New applications require owner-operated workers by default. Lower-trust and
 independently operated workers receive no work until an owner explicitly opts
 an application into that trust level. Trust labels are policy assertions made
 by the organization owner; cryptographic enrollment proves device-key
 possession but does not verify the operator or model.
+
+## Shared pools
+
+The first shared-capacity boundary uses provider-owned pools and explicit
+consumer organization grants. A provider creates a shared pool in Hosting,
+adds its own workers, marks those workers as shared capacity, and grants access
+using the consumer organization's slug. The granted pool then appears in that
+consumer's application settings.
+
+Shared pools are not publicly discoverable. Consumers see the pool name and a
+general routing explanation, never worker names, machine details, or provider
+identity. A consumer must explicitly choose external or verified provider
+trust before a cross-organization worker can claim its runs. Revoking a grant
+removes the pool from future application routing without broadening queued runs
+to automatic routing.
 
 ## Safety and limits
 
@@ -210,7 +226,9 @@ possession but does not verify the operator or model.
   completion is acknowledged idempotently.
 - The local outbox stops new work instead of silently dropping results.
 - Organization membership is the authorization boundary for every console read
-  and mutation; worker claims and definition lookup are tenant-scoped as well.
+  and mutation. Cross-organization claims require an explicit shared-pool
+  grant, and task definitions are available to a worker only while it holds the
+  active run lease.
 
 See [docs/protocol.md](docs/protocol.md) for lifecycle and API semantics.
 See [docs/worker-identity.md](docs/worker-identity.md) and

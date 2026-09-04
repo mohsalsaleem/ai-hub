@@ -7,7 +7,7 @@ class WorkersController < ApplicationController
       :worker_identity_events).order(last_seen_at: :desc, created_at: :desc)
     @worker = current_organization.workers.new
     @worker_pool = current_organization.worker_pools.new
-    @worker_pools = current_organization.worker_pools.order(:name)
+    @worker_pools = current_organization.worker_pools.includes(worker_pool_access_grants: :organization).order(:name)
   end
 
   def create

@@ -4,7 +4,7 @@
 
 <section class="section-block section-block-first panel routing-policy">
   <div class="section-head"><div><span class="overline">Application settings</span><h2>Routing and access</h2></div><span class="chip"><%= worker_trust_label(@application.minimum_worker_trust) %></span></div>
-  <p class="secondary">Runs use <%= @application.worker_pool ? @application.worker_pool.name : "automatic private routing" %> when available capacity meets this trust level.</p>
+  <p class="secondary">Runs use <%= @application.worker_pool ? @application.worker_pool.name : "automatic private routing" %> when available capacity meets this trust level. Shared pools expose a service boundary, not provider or worker identity.</p>
   <% if owner? %>
     <%= form_with model: @application, url: application_path(@application), class: "routing-form" do |form| %>
       <label>Minimum provider trust<%= form.select :minimum_worker_trust, options_for_select(worker_trust_options, @application.minimum_worker_trust) %></label>

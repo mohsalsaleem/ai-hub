@@ -4,6 +4,8 @@ class Organization < ApplicationRecord
   has_many :hub_applications, dependent: :destroy
   has_many :workers, dependent: :destroy
   has_many :worker_pools, dependent: :destroy
+  has_many :worker_pool_access_grants, dependent: :destroy
+  has_many :accessible_worker_pools, through: :worker_pool_access_grants, source: :worker_pool
   has_many :task_definitions, through: :hub_applications
   has_many :jobs, through: :hub_applications
 

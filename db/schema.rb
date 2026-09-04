@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_110000) do
   create_table "hub_applications", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
@@ -152,6 +152,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_100000) do
     t.index ["worker_id"], name: "index_worker_identity_events_on_worker_id"
   end
 
+  create_table "worker_pool_access_grants", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "organization_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "worker_pool_id", null: false
+    t.index ["organization_id"], name: "index_worker_pool_access_grants_on_organization_id"
+    t.index ["worker_pool_id", "organization_id"], name: "index_pool_access_grants_on_pool_and_organization", unique: true
+    t.index ["worker_pool_id"], name: "index_worker_pool_access_grants_on_worker_pool_id"
+  end
+
   create_table "worker_pool_memberships", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -163,6 +173,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_100000) do
   end
 
   create_table "worker_pools", force: :cascade do |t|
+    t.string "access_mode", default: "private", null: false
     t.datetime "created_at", null: false
     t.string "name", null: false
     t.integer "organization_id", null: false
@@ -229,6 +240,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_100000) do
   add_foreign_key "task_definitions", "hub_applications"
   add_foreign_key "worker_enrollment_grants", "workers"
   add_foreign_key "worker_identity_events", "workers"
+  add_foreign_key "worker_pool_access_grants", "organizations"
+  add_foreign_key "worker_pool_access_grants", "worker_pools"
   add_foreign_key "worker_pool_memberships", "worker_pools"
   add_foreign_key "worker_pool_memberships", "workers"
   add_foreign_key "worker_pools", "organizations"

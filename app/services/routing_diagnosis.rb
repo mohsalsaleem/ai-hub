@@ -8,14 +8,14 @@ class RoutingDiagnosis
   def call
     return selected_diagnosis if @job.worker_id.present? || @job.routing_decisions.selected.exists?
 
-    workers = @job.hub_application.organization.workers.includes(:worker_pools).to_a
+    workers = candidate_workers
     workers = workers.select { |worker| pool_match?(worker) }
     return diagnosis("no_capacity", "No provider capacity is registered for this routing target.") if workers.empty?
 
     workers = workers.select(&:active?)
     return diagnosis("capacity_inactive", "Capacity is registered in this pool but is not accepting runs.") if workers.empty?
 
-    workers = workers.select { |worker| worker.meets_trust?(@job.minimum_worker_trust) }
+    workers = workers.select { |worker| WorkerEligibility.new(worker).checks(@job).fetch(:trust) }
     return diagnosis("trust_requirement_not_met", "Available capacity does not meet this application's trust requirement.") if workers.empty?
 
     workers = workers.select { |worker| WorkerEligibility.new(worker).eligible_for?(@job) }
@@ -47,6 +47,13 @@ class RoutingDiagnosis
   end
 
   def automatic_routing? = @job.worker_pool_id.nil? && @job.routing_pool_name.nil?
+
+  def candidate_workers
+    return [] if @job.worker_pool_id.nil? && @job.routing_pool_name.present?
+
+    scope = @job.worker_pool ? @job.worker_pool.workers : @job.hub_application.organization.workers
+    scope.includes(:worker_pools).to_a
+  end
 
   def diagnosis(code, summary) = Diagnosis.new(code:, summary:)
 end

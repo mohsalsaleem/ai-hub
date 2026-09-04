@@ -17,5 +17,5 @@ class WorkerPoolsController < ApplicationController
 
   private
 
-  def worker_pool_params = params.require(:worker_pool).permit(:name)
+  def worker_pool_params = params.require(:worker_pool).permit(:name, :access_mode)
 end

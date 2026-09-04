@@ -16,10 +16,30 @@
 
 <% if @worker_pools.any? %>
   <section class="pool-strip" aria-label="Worker pools">
-    <div><span class="overline">Worker pools</span><p>Applications can route runs through one pool.</p></div>
+    <div><span class="overline">Worker pools</span><p>Private pools stay inside this organization. Shared pools require an explicit consumer grant.</p></div>
     <div class="pool-list">
       <% @worker_pools.each do |pool| %>
-        <span class="pool-pill"><%= pool.name %><small><%= pool.workers.count %></small><% if owner? %><%= button_to "×", worker_pool_path(pool), method: :delete, aria: { label: "Remove #{pool.name}" }, data: { turbo_confirm: "Remove this pool? Future runs will use automatic routing. Existing queued runs will remain bound to this pool." } %><% end %></span>
+        <span class="pool-pill" id="pool-<%= pool.id %>"><%= pool.name %><small><%= pool.workers.count %></small><small><%= pool.access_mode.humanize %></small><% if pool.shared? %><button type="button" onclick="document.getElementById('pool-access-<%= pool.id %>').showModal()">Access</button><% end %><% if owner? %><%= button_to "×", worker_pool_path(pool), method: :delete, aria: { label: "Remove #{pool.name}" }, data: { turbo_confirm: "Remove this pool? Future runs will use automatic routing. Existing queued runs will remain bound to this pool." } %><% end %></span>
+        <% if pool.shared? %>
+          <dialog id="pool-access-<%= pool.id %>" class="dialog">
+            <form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form>
+            <h2><%= pool.name %> access</h2>
+            <p>Grant a consumer organization access by its exact slug. Consumers see this pool, never its workers.</p>
+            <% if pool.worker_pool_access_grants.any? %>
+              <div class="access-list">
+                <% pool.worker_pool_access_grants.each do |grant| %>
+                  <div><span><%= grant.organization.name %><small class="mono"><%= grant.organization.slug %></small></span><%= button_to "Revoke", worker_pool_access_grant_path(pool, grant), method: :delete, class: "text-button danger", data: { turbo_confirm: "Revoke this organization's access? Future runs will return to automatic routing." } %></div>
+                <% end %>
+              </div>
+            <% else %>
+              <p class="secondary">No consumer organizations have access.</p>
+            <% end %>
+            <%= form_with url: worker_pool_access_grants_path(pool), scope: :worker_pool_access_grant, class: "stack-form" do |form| %>
+              <label>Organization slug<%= form.text_field :organization_slug, required: true, placeholder: "consumer-organization" %></label>
+              <%= form.submit "Grant access", class: "button" %>
+            <% end %>
+          </dialog>
+        <% end %>
       <% end %>
     </div>
   </section>
@@ -99,9 +119,10 @@
 <dialog id="pool-form" class="dialog">
   <form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form>
   <h2>Create worker pool</h2>
-  <p>Use pools for locations, hardware classes, teams, or provider groups.</p>
+  <p>Use pools for locations, hardware classes, or provider groups. Shared pools remain invisible until you grant access.</p>
   <%= form_with model: @worker_pool, url: worker_pools_path, class: "stack-form" do |form| %>
     <label>Pool name<%= form.text_field :name, required: true, placeholder: "Private GPU" %></label>
+    <label>Access<%= form.select :access_mode, options_for_select(worker_pool_access_options, "private") %></label>
     <%= form.submit "Create pool", class: "button" %>
   <% end %>
 </dialog>

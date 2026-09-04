@@ -15,8 +15,8 @@ class HubApplication < ApplicationRecord
   private
 
   def worker_pool_matches_organization
-    return if worker_pool.nil? || worker_pool.organization_id == organization_id
+    return if worker_pool.nil? || worker_pool.accessible_to?(organization)
 
-    errors.add(:worker_pool, "must belong to the application organization")
+    errors.add(:worker_pool, "is not available to this organization")
   end
 end

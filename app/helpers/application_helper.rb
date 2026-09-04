@@ -40,4 +40,8 @@ module ApplicationHelper
   def worker_participation_options
     [ [ "Private capacity", "private" ], [ "Shared capacity", "shared" ] ]
   end
+
+  def worker_pool_access_options
+    [ [ "Private pool", "private" ], [ "Shared by grant", "shared" ] ]
+  end
 end

@@ -112,6 +112,43 @@ class TenantConsoleTest < ActionDispatch::IntegrationTest
     assert_select "article#worker-#{worker.id}", text: /Shared capacity.*Mon, Tue, 22:00 to 06:00/m
   end
 
+  test "provider grants a consumer access without exposing workers" do
+    post worker_pools_path, params: { worker_pool: { name: "Shared GPU", access_mode: "shared" } }
+    pool = organizations(:one).worker_pools.find_by!(slug: "shared-gpu")
+    provider_worker, = Worker.issue!(organization: organizations(:one), name: "Provider machine")
+
+    post worker_pool_access_grants_path(pool), params: {
+      worker_pool_access_grant: { organization_slug: organizations(:two).slug }
+    }
+    assert_redirected_to hosting_path(anchor: "pool-#{pool.id}")
+    assert pool.accessible_to?(organizations(:two))
+
+    sign_out
+    sign_in_as(users(:two))
+    get settings_application_path(@other_application)
+
+    assert_response :success
+    assert_select "select[name='hub_application[worker_pool_id]'] option", text: "Shared GPU"
+    assert_no_match provider_worker.name, response.body
+
+    patch application_path(@other_application), params: {
+      hub_application: { minimum_worker_trust: "verified", worker_pool_id: pool.id }
+    }
+    assert_redirected_to settings_application_path(@other_application)
+    assert_equal pool, @other_application.reload.worker_pool
+  end
+
+  test "an organization cannot manage another provider's pool grants" do
+    pool = organizations(:two).worker_pools.create!(name: "Other shared GPU", access_mode: "shared")
+
+    post worker_pool_access_grants_path(pool), params: {
+      worker_pool_access_grant: { organization_slug: organizations(:one).slug }
+    }
+
+    assert_response :not_found
+    assert_empty pool.worker_pool_access_grants
+  end
+
   test "product entry points expose activity hosting and settings" do
     get activity_path
     assert_response :success
