@@ -48,6 +48,8 @@
 
 <%= render "shared/usage_summary", summary: @provider_usage_summary, label: "Usage · 30 days", description: "Model work served by this organization's workers" %>
 
+<section class="panel section-block"><div class="section-head"><div><span class="overline">Provider earnings</span><h2><%= number_with_delimiter(@provider_credits) %> credits</h2></div></div><p class="body-copy">Immutable internal credits earned from completed shared executions. Payouts are not enabled.</p></section>
+
 <% if @recent_provider_executions.any? %>
   <section class="panel section-block">
     <div class="section-head"><div><span class="overline">Accounting evidence</span><h2>Recent executions</h2></div></div>

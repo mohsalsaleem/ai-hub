@@ -346,6 +346,9 @@ runs, and executions without usage are uncharged. Amounts are integers; the
 platform share rounds down and the provider receives the remainder. Pricing is
 versioned on every immutable ledger entry so later policy changes never rewrite
 historical balances. Internal credits have no cash value in this phase.
+Platform operators may correct a balance only by posting a signed positive or
+negative adjustment with a required reason. Adjustments create new immutable
+ledger and operator-audit entries; they never update or delete execution charges.
 
 Acceptance criteria:
 

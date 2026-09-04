@@ -10,6 +10,8 @@
 
 <%= render "shared/usage_summary", summary: @shared_usage_summary, label: "Shared usage · 30 days", description: "Cross-organization model work, without prompts or responses" %>
 
+<section class="panel platform-section"><div class="section-head"><div><span class="overline">Ledger control</span><h2>Credit reconciliation</h2></div><%= status_badge(@ledger_reconciliation.balanced ? "balanced" : "attention") %></div><div class="platform-list"><div><span><strong><%= number_with_delimiter(@platform_credits) %> platform credits</strong><small>Internal accounting units</small></span><span><small><%= @ledger_reconciliation.execution_count %> billable executions</small><small><%= @ledger_reconciliation.entry_count %> execution entries</small></span></div></div></section>
+
 <section class="panel platform-section">
   <div class="section-head"><div><span class="overline">Trust boundary</span><h2>Shared pools</h2></div><span class="secondary"><%= pluralize(@shared_pools.size, "pool") %></span></div>
   <div class="table-wrap"><table><thead><tr><th>Pool</th><th>Provider</th><th>Status</th><th>Capacity</th><th>Consumers</th><th>Action</th></tr></thead><tbody>
@@ -59,10 +61,11 @@
     <div class="section-head"><div><span class="overline">Tenancy</span><h2>Organizations</h2></div></div>
     <div class="platform-list">
       <% @organizations.each do |organization| %>
-        <div>
+        <div id="organization-<%= organization.id %>">
           <span><strong><%= organization.name %></strong><small class="mono"><%= organization.slug %></small></span>
-          <span><small><%= pluralize(organization.hub_applications.size, "application") %></small><small><%= pluralize(organization.workers.size, "worker") %></small></span>
+          <span><strong><%= number_with_delimiter(organization.credit_balance) %> credits</strong><button class="text-button" type="button" onclick="document.getElementById('credit-adjustment-<%= organization.id %>').showModal()">Adjust</button></span>
         </div>
+        <dialog id="credit-adjustment-<%= organization.id %>" class="dialog"><form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form><h2>Adjust <%= organization.name %></h2><p>Post an immutable positive or negative whole-credit adjustment. Existing entries will not be changed.</p><%= form_with url: platform_organization_credit_adjustment_path(organization), class: "stack-form" do |form| %><label>Amount<%= form.number_field :amount, required: true, step: 1, placeholder: "1000 or -1000" %></label><label>Reason<%= form.text_field :reason, required: true, maxlength: 500 %></label><%= form.submit "Post adjustment", class: "button" %><% end %></dialog>
       <% end %>
     </div>
   </section>

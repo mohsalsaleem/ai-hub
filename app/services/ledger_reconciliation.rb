@@ -7,7 +7,7 @@ class LedgerReconciliation
     errors = executions.filter_map do |execution|
       entries = execution.credit_ledger_entries
       types = entries.map(&:entry_type).sort
-      next if types == CreditLedgerEntry::ENTRY_TYPES.sort && entries.sum(&:amount).zero?
+      next if types == CreditLedgerEntry::EXECUTION_ENTRY_TYPES.sort && entries.sum(&:amount).zero?
 
       execution.id
     end

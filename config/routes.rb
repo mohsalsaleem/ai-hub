@@ -34,6 +34,9 @@ Rails.application.routes.draw do
       patch :suspend, on: :member
       patch :revoke, on: :member
     end
+    resources :organizations, only: [] do
+      resource :credit_adjustment, only: :create
+    end
   end
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html

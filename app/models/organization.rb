@@ -14,6 +14,8 @@ class Organization < ApplicationRecord
     foreign_key: :provider_organization_id, inverse_of: :provider_organization, dependent: :restrict_with_error
   has_many :credit_ledger_entries, dependent: :restrict_with_error
 
+  def credit_balance = credit_ledger_entries.sum(:amount)
+
   validates :name, presence: true, length: { maximum: 100 }
   validates :slug, presence: true, uniqueness: true,
     format: { with: /\A[a-z0-9]+(?:-[a-z0-9]+)*\z/ }

@@ -1,4 +1,5 @@
 class PlatformOperator < ApplicationRecord
+  has_many :credit_ledger_entries, dependent: :restrict_with_error
   has_secure_password
 
   has_many :platform_sessions, dependent: :destroy

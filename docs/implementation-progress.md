@@ -18,7 +18,7 @@ Status: Metering deployed; internal credit ledger in progress
 | Consumer usage view | Complete | Run details show attempts, tokens, and duration without provider worker or model identity. |
 | Provider usage view | Complete | Hosting shows 30-day contribution, recent executions, and LLM model identity without consumer payloads. |
 | Platform usage view | Complete | Operations shows shared usage without prompts or responses. |
-| Credits and balances | In progress | Append-only balanced entries are posted for billable shared executions. |
+| Credits and balances | In progress | Append-only entries drive consumer balances, provider earnings, and audited operator adjustments. |
 | Pricing and platform share | In progress | Version 1 charges one internal credit per reported token and assigns 80% to the provider and 20% to AI Hub. |
 | Payments and payouts | Deferred | Begins only after internal credits reconcile reliably. |
 
@@ -108,10 +108,10 @@ Status: Complete and committed
 | 2026-09-04 | Worker 0.3 local restart | LaunchAgent restarted and verified running with the `llm_model` usage contract. |
 | 2026-09-04 | Metering commit | `6021d57 Add execution metering foundation` pushed to `main`. |
 | 2026-09-04 | Metering production deployment | Coolify deployment finished on `6021d57`; `/up`, public metering docs, and worker polling verified. |
-| 2026-09-04 | Credit ledger foundation checks | 111 tests, 550 assertions, no failures; 139 files pass RuboCop; Brakeman reports no warnings. |
+| 2026-09-04 | Credit ledger and balance checks | 114 tests, 575 assertions, no failures; 142 files pass RuboCop; Brakeman reports no warnings. |
 
 ## Next work
 
 1. Complete and verify the internal credit ledger and reconciliation checks.
-2. Add consumer and provider balance views.
+2. Verify balance views, reconciliation, and operator adjustments in the browser.
 3. Keep payments and payouts deferred until ledger reconciliation is proven in production.

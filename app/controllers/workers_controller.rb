@@ -12,6 +12,8 @@ class WorkersController < ApplicationController
       .where(finished_at: 30.days.ago..Time.current)
     @provider_usage_summary = UsageSummary.new(provider_usage).call
     @recent_provider_executions = provider_usage.order(finished_at: :desc).limit(20)
+    @provider_credits = current_organization.credit_ledger_entries.where(entry_type: "provider_credit")
+      .sum(:amount)
   end
 
   def create

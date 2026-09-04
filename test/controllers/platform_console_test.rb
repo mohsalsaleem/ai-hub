@@ -114,4 +114,30 @@ class PlatformConsoleTest < ActionDispatch::IntegrationTest
     assert_nil application.reload.worker_pool
     assert_equal "shared_pool.revoked", PlatformAuditEvent.last.action
   end
+
+  test "operator posts an immutable organization credit adjustment with audit evidence" do
+    assert_difference [ "CreditLedgerEntry.count", "PlatformAuditEvent.count" ], 1 do
+      post platform_organization_credit_adjustment_path(@consumer),
+        params: { amount: "250", reason: "Service recovery credit" }
+    end
+
+    assert_redirected_to platform_root_path(anchor: "organization-#{@consumer.id}")
+    entry = CreditLedgerEntry.last
+    assert_equal "admin_adjustment", entry.entry_type
+    assert_equal 250, entry.amount
+    assert_equal @operator, entry.platform_operator
+    assert_equal "Service recovery credit", entry.reason
+    assert_equal 250, @consumer.credit_balance
+    assert_equal "credits.adjusted", PlatformAuditEvent.last.action
+  end
+
+  test "operator cannot post a zero or reasonless adjustment" do
+    assert_no_difference [ "CreditLedgerEntry.count", "PlatformAuditEvent.count" ] do
+      post platform_organization_credit_adjustment_path(@consumer),
+        params: { amount: "0", reason: "" }
+    end
+
+    assert_redirected_to platform_root_path(anchor: "organization-#{@consumer.id}")
+    assert_equal 0, @consumer.credit_balance
+  end
 end

@@ -236,4 +236,19 @@ class TenantConsoleTest < ActionDispatch::IntegrationTest
     assert_select "table", text: /Meter worker.*provider-llm.*Private.*Completed.*9.*30 ms/m
     assert_no_match "do not show", response.body
   end
+
+  test "organization settings and hosting show scoped credit balances" do
+    operator = PlatformOperator.create!(email_address: "balance-operator@example.com",
+      password: "operator-password")
+    CreditAdjuster.post!(organization: organizations(:one), amount: "125", reason: "Opening credit",
+      operator:)
+
+    get settings_path
+    assert_response :success
+    assert_select ".section-block", text: /Balance.*125.*Opening credit/m
+
+    get hosting_path
+    assert_response :success
+    assert_select ".section-block", text: /Provider earnings.*0 credits/m
+  end
 end

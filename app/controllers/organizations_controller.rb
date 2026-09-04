@@ -19,6 +19,8 @@ class OrganizationsController < ApplicationController
 
   def show
     @memberships = current_organization.memberships.includes(:user).order(:created_at)
+    @credit_balance = current_organization.credit_balance
+    @recent_credit_entries = current_organization.credit_ledger_entries.order(created_at: :desc).limit(20)
   end
 
   def update
