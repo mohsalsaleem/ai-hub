@@ -32,6 +32,8 @@ authenticate a worker but do not make an untrusted model host confidential.
 | Worker dies during a job | Expiring lease and bounded retry budget |
 | Application attempts code execution | Fixed executors; definitions carry instructions and schemas only |
 | Oversized payload | Request and definition size limits |
+| Unreviewed shared provider | Cross-organization claims require platform approval of the provider-owned pool |
+| Operator misuse | Dedicated operator authorization, metadata-only console, and immutable action audit history |
 
 ## Known gaps
 

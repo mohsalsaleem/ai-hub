@@ -52,7 +52,8 @@ class JobClaimer
       .or(local_jobs.where(worker_pool_id: pool_ids)).select(:id)
     return jobs.where(id: local_ids) unless @worker.participation_mode == "shared"
 
-    shared_pool_ids = @worker.worker_pools.where(access_mode: "shared").select(:id)
+    shared_pool_ids = @worker.worker_pools
+      .where(access_mode: "shared", operator_status: "approved").select(:id)
     shared_ids = jobs.joins(:hub_application)
       .joins("INNER JOIN worker_pool_access_grants ON worker_pool_access_grants.worker_pool_id = jobs.worker_pool_id")
       .where(worker_pool_id: shared_pool_ids)

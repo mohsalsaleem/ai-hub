@@ -19,12 +19,13 @@
     <div><span class="overline">Worker pools</span><p>Private pools stay inside this organization. Shared pools require an explicit consumer grant.</p></div>
     <div class="pool-list">
       <% @worker_pools.each do |pool| %>
-        <span class="pool-pill" id="pool-<%= pool.id %>"><%= pool.name %><small><%= pool.workers.count %></small><small><%= pool.access_mode.humanize %></small><% if pool.shared? %><button type="button" onclick="document.getElementById('pool-access-<%= pool.id %>').showModal()">Access</button><% end %><% if owner? %><%= button_to "×", worker_pool_path(pool), method: :delete, aria: { label: "Remove #{pool.name}" }, data: { turbo_confirm: "Remove this pool? Future runs will use automatic routing. Existing queued runs will remain bound to this pool." } %><% end %></span>
+        <span class="pool-pill" id="pool-<%= pool.id %>"><%= pool.name %><small><%= pool.workers.count %></small><small><%= pool.access_mode.humanize %></small><% if pool.shared? %><%= status_badge(pool.operator_status) %><button type="button" onclick="document.getElementById('pool-access-<%= pool.id %>').showModal()">Access</button><% end %><% if owner? %><%= button_to "×", worker_pool_path(pool), method: :delete, aria: { label: "Remove #{pool.name}" }, data: { turbo_confirm: "Remove this pool? Future runs will use automatic routing. Existing queued runs will remain bound to this pool." } %><% end %></span>
         <% if pool.shared? %>
           <dialog id="pool-access-<%= pool.id %>" class="dialog">
             <form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form>
             <h2><%= pool.name %> access</h2>
             <p>Grant a consumer organization access by its exact slug. Consumers see this pool, never its workers.</p>
+            <% unless pool.shared_access_enabled? %><p class="review-note">Consumer routing remains unavailable while this pool is <%= pool.operator_status.humanize.downcase %>.</p><% end %>
             <% if pool.worker_pool_access_grants.any? %>
               <div class="access-list">
                 <% pool.worker_pool_access_grants.each do |grant| %>

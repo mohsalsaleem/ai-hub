@@ -11,6 +11,31 @@
   <body>
     <% if content_for?(:public_page) %>
       <%= yield %>
+    <% elsif platform_console? %>
+      <% if platform_authenticated? %>
+      <div class="app-frame platform-frame">
+        <aside class="sidebar platform-sidebar">
+          <div class="brand"><span>AI Hub</span><small>Platform</small></div>
+          <div class="org-block"><span class="overline">Operations</span><strong>Platform console</strong><span>Cross-tenant controls</span></div>
+          <nav class="nav-stack" aria-label="Platform navigation">
+            <div class="nav-primary">
+              <%= nav_link "Operations", platform_root_path, section: "dashboard" %>
+            </div>
+            <div class="nav-secondary">
+              <%= nav_link "Tenant console", dashboard_path %>
+            </div>
+          </nav>
+          <div class="account-block">
+            <span class="avatar"><%= current_platform_operator.email_address.first.upcase %></span>
+            <div><strong><%= current_platform_operator.email_address.split("@").first %></strong><span>Platform operator</span></div>
+            <%= button_to "Sign out", platform_session_path, method: :delete, class: "text-button" %>
+          </div>
+        </aside>
+        <main class="main-panel"><%= render "shared/flash" %><%= yield %></main>
+      </div>
+      <% else %>
+        <main class="auth-shell"><%= render "shared/flash" %><%= yield %></main>
+      <% end %>
     <% elsif authenticated? && current_organization %>
       <div class="app-frame">
         <aside class="sidebar">

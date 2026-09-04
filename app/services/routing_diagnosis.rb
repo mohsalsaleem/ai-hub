@@ -7,6 +7,8 @@ class RoutingDiagnosis
 
   def call
     return selected_diagnosis if @job.worker_id.present? || @job.routing_decisions.selected.exists?
+    operator_diagnosis = shared_pool_operator_diagnosis
+    return operator_diagnosis if operator_diagnosis
 
     workers = candidate_workers
     workers = workers.select { |worker| pool_match?(worker) }
@@ -40,6 +42,20 @@ class RoutingDiagnosis
 
   def selected_diagnosis
     diagnosis("capacity_selected", "Compatible capacity was selected from the configured pool.")
+  end
+
+  def shared_pool_operator_diagnosis
+    pool = @job.worker_pool
+    return if pool.nil? || pool.organization_id == @job.hub_application.organization_id || pool.operator_status == "approved"
+
+    case pool.operator_status
+    when "pending_review"
+      diagnosis("pool_pending_review", "This shared pool is awaiting platform review.")
+    when "suspended"
+      diagnosis("pool_suspended", "This shared pool is temporarily unavailable.")
+    when "revoked"
+      diagnosis("pool_revoked", "This shared pool is no longer available for consumer runs.")
+    end
   end
 
   def pool_match?(worker)

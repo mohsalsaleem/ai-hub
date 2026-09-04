@@ -8,7 +8,7 @@ lands, changes scope, or is deliberately deferred.
 
 ### Milestone 4: Shared pools
 
-Status: Provider-owned pool slice complete locally, pending review and commit
+Status: Platform operator control complete locally, pending commit
 
 | Work item | Status | Notes |
 | --- | --- | --- |
@@ -19,8 +19,12 @@ Status: Provider-owned pool slice complete locally, pending review and commit
 | Cross-organization trust | Complete | Consumers must explicitly accept external or verified provider capacity. |
 | Scoped task-definition access | Complete | A worker can fetch a consumer definition only while holding its active lease. |
 | Grant revocation | Complete | Revocation clears future application routing and leaves queued run snapshots bound. |
+| Platform operator authorization | Complete locally | Separate identities and sessions cannot be reached through tenant credentials. |
+| Isolated operator console | Complete locally | Cross-tenant metadata is separated from tenant navigation and excludes run payloads. |
+| Shared pool review | Complete locally | Pending pools require approval; suspension and revocation stop cross-organization claims. |
+| Operator audit history | Complete locally | Shared pool decisions create immutable actor and target records. |
 | Multi-provider pools | Deferred | The first slice keeps each shared pool and its capacity under one provider organization. |
-| Platform-managed pools | Deferred | Requires a separate platform operator role and administration surface. |
+| Platform-managed pools | Deferred | Operator controls exist, but platform-owned pool membership is not implemented. |
 
 ## Decisions recorded
 
@@ -74,12 +78,16 @@ Status: Provider-owned pool slice complete locally, pending review and commit
 | 2026-09-04 | Shared-pool routing tests | 80 tests, 370 assertions, no failures. |
 | 2026-09-04 | Shared-pool RuboCop | 114 files, no offenses. |
 | 2026-09-04 | Shared-pool Brakeman | 79 checks, no security warnings. |
+| 2026-09-04 | Operator foundation Rails tests | 94 tests, 451 assertions, no failures. |
+| 2026-09-04 | Operator foundation RuboCop | 128 files, no offenses. |
+| 2026-09-04 | Operator foundation Brakeman | 79 checks, no security warnings. |
+| 2026-09-04 | Operator console browser check | Separate sign-in, isolated navigation, pool review metadata, tenant return path, and payload exclusion verified locally. |
 | 2026-09-04 | Shared-pool local browser check | Provider grant management and consumer pool selection verified without worker disclosure. |
+| 2026-09-04 | Shared-pool commit | `246d3b0 Add granted shared pool routing` |
 
 ## Next work
 
-1. Review shared-pool access management and consumer selection locally.
-2. Commit and deploy the provider-owned shared-pool slice.
-3. Add a platform operator role before platform-managed or multi-provider
-   pools.
-4. Design usage metering and retention before rewards or a marketplace.
+1. Verify operator authorization and shared pool controls locally.
+2. Commit and deploy the operator foundation.
+3. Design immutable usage metering and retention.
+4. Add platform-managed or multi-provider pools only after metering semantics are stable.

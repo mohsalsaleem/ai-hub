@@ -5,6 +5,7 @@ class SharedPoolRoutingTest < ActionDispatch::IntegrationTest
     @provider = organizations(:one)
     @consumer = organizations(:two)
     @pool = @provider.worker_pools.create!(name: "Shared GPU", access_mode: "shared")
+    @pool.transition_operator_status!("approved")
     @pool.worker_pool_access_grants.create!(organization: @consumer)
     @worker, @worker_token = Worker.issue!(organization: @provider, name: "Provider GPU",
       participation_mode: "shared", trust_tier: "verified")

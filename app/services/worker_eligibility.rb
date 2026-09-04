@@ -31,7 +31,7 @@ class WorkerEligibility
 
   def shared_pool_access?(job)
     pool = job.worker_pool
-    pool&.organization_id == @worker.organization_id && pool.shared? &&
+    pool&.organization_id == @worker.organization_id && pool.shared_access_enabled? &&
       pool.worker_pool_access_grants.exists?(organization_id: job.hub_application.organization_id)
   end
 

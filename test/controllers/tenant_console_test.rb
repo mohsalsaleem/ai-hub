@@ -115,6 +115,7 @@ class TenantConsoleTest < ActionDispatch::IntegrationTest
   test "provider grants a consumer access without exposing workers" do
     post worker_pools_path, params: { worker_pool: { name: "Shared GPU", access_mode: "shared" } }
     pool = organizations(:one).worker_pools.find_by!(slug: "shared-gpu")
+    pool.transition_operator_status!("approved")
     provider_worker, = Worker.issue!(organization: organizations(:one), name: "Provider machine")
 
     post worker_pool_access_grants_path(pool), params: {

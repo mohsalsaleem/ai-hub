@@ -1,0 +1,15 @@
+module Platform
+  class DashboardController < BaseController
+    def show
+      @organizations = Organization.includes(:hub_applications, :workers).order(:name)
+      @shared_pools = WorkerPool.shared.includes(:organization, :workers,
+        worker_pool_access_grants: :organization).order(created_at: :desc)
+      @shared_workers = Worker.where(participation_mode: "shared")
+      @recent_shared_runs = Job.joins(:hub_application, :worker_pool)
+        .where("hub_applications.organization_id != worker_pools.organization_id")
+        .includes(:hub_application, worker_pool: :organization)
+        .order(created_at: :desc).limit(20)
+      @audit_events = PlatformAuditEvent.includes(:platform_operator).order(created_at: :desc).limit(20)
+    end
+  end
+end

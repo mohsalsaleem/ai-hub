@@ -25,6 +25,17 @@ Rails.application.routes.draw do
   end
   get "dashboard", to: "dashboard#show", as: :dashboard
   get "docs", to: "docs#show", as: :docs
+
+  namespace :platform do
+    resource :session, only: %i[new create destroy]
+    root "dashboard#show"
+    resources :worker_pools, only: [] do
+      patch :approve, on: :member
+      patch :suspend, on: :member
+      patch :revoke, on: :member
+    end
+  end
+
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

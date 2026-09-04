@@ -13,8 +13,8 @@ module ApplicationHelper
 
   def status_badge(status)
     tone = case status.to_s
-    when "completed", "active", "online", "available" then "good"
-    when "failed", "dead", "revoked", "offline" then "bad"
+    when "completed", "active", "online", "available", "approved" then "good"
+    when "failed", "dead", "revoked", "offline", "suspended" then "bad"
     else "pending"
     end
     content_tag :span, status.to_s.humanize, class: "badge badge-#{tone}"

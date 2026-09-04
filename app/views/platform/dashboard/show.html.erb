@@ -1,0 +1,74 @@
+<% content_for :title, "Platform operations · AI Hub" %>
+<%= render "shared/page_header", title: "Platform operations", description: "Review shared capacity without exposing tenant prompts or model responses" %>
+
+<section class="metric-grid">
+  <article class="metric-card"><span>Organizations</span><strong><%= number_with_delimiter(@organizations.size) %></strong><small>Isolated tenants</small></article>
+  <article class="metric-card"><span>Pending review</span><strong><%= @shared_pools.count { |pool| pool.operator_status == "pending_review" } %></strong><small>Shared pools awaiting action</small></article>
+  <article class="metric-card"><span>Approved pools</span><strong><%= @shared_pools.count(&:shared_access_enabled?) %></strong><small>Available by consumer grant</small></article>
+  <article class="metric-card"><span>Shared capacity</span><strong><%= @shared_workers.count(&:active?) %></strong><small><%= @shared_workers.count(&:online?) %> workers online</small></article>
+</section>
+
+<section class="panel platform-section">
+  <div class="section-head"><div><span class="overline">Trust boundary</span><h2>Shared pools</h2></div><span class="secondary"><%= pluralize(@shared_pools.size, "pool") %></span></div>
+  <div class="table-wrap"><table><thead><tr><th>Pool</th><th>Provider</th><th>Status</th><th>Capacity</th><th>Consumers</th><th>Action</th></tr></thead><tbody>
+    <% @shared_pools.each do |pool| %>
+      <tr id="pool-<%= pool.id %>">
+        <td><strong><%= pool.name %></strong><br><span class="secondary mono"><%= pool.slug %></span></td>
+        <td><%= pool.organization.name %></td>
+        <td><%= status_badge(pool.operator_status) %></td>
+        <td><%= pool.workers.count %> workers<br><span class="secondary"><%= pool.workers.count(&:online?) %> online</span></td>
+        <td><%= pool.worker_pool_access_grants.count %> grants</td>
+        <td>
+          <div class="table-actions">
+            <% if pool.operator_status.in?(%w[pending_review suspended]) %>
+              <%= button_to "Approve", approve_platform_worker_pool_path(pool), method: :patch, class: "text-button" %>
+            <% elsif pool.operator_status == "approved" %>
+              <%= button_to "Suspend", suspend_platform_worker_pool_path(pool), method: :patch, class: "text-button" %>
+            <% end %>
+            <% unless pool.operator_status == "revoked" %>
+              <%= button_to "Revoke", revoke_platform_worker_pool_path(pool), method: :patch, class: "text-button danger", data: { turbo_confirm: "Permanently revoke this shared pool? Consumer grants and future routing selections will be removed." } %>
+            <% end %>
+          </div>
+        </td>
+      </tr>
+    <% end %>
+    <% if @shared_pools.empty? %><tr><td colspan="6" class="empty-state">No provider has submitted shared capacity.</td></tr><% end %>
+  </tbody></table></div>
+</section>
+
+<div class="platform-grid">
+  <section class="panel platform-section">
+    <div class="section-head"><div><span class="overline">Metadata only</span><h2>Recent shared runs</h2></div></div>
+    <div class="platform-list">
+      <% @recent_shared_runs.each do |job| %>
+        <div>
+          <span><strong class="mono"><%= job.public_id %></strong><small><%= job.hub_application.organization.name %> via <%= job.worker_pool.name %></small></span>
+          <span><%= status_badge(job.status == "leased" ? "running" : job.status) %><small><%= time_ago_in_words(job.created_at) %> ago</small></span>
+        </div>
+      <% end %>
+      <% if @recent_shared_runs.empty? %><p class="empty-state">No cross-organization runs yet.</p><% end %>
+    </div>
+  </section>
+
+  <section class="panel platform-section">
+    <div class="section-head"><div><span class="overline">Tenancy</span><h2>Organizations</h2></div></div>
+    <div class="platform-list">
+      <% @organizations.each do |organization| %>
+        <div>
+          <span><strong><%= organization.name %></strong><small class="mono"><%= organization.slug %></small></span>
+          <span><small><%= pluralize(organization.hub_applications.size, "application") %></small><small><%= pluralize(organization.workers.size, "worker") %></small></span>
+        </div>
+      <% end %>
+    </div>
+  </section>
+</div>
+
+<section class="panel platform-section">
+  <div class="section-head"><div><span class="overline">Immutable</span><h2>Operator audit history</h2></div></div>
+  <div class="table-wrap"><table><thead><tr><th>Action</th><th>Subject</th><th>Operator</th><th>When</th></tr></thead><tbody>
+    <% @audit_events.each do |event| %>
+      <tr><td><%= event.action.humanize %></td><td><%= event.subject_label %> <span class="secondary">#<%= event.subject_id %></span></td><td><%= event.platform_operator.email_address %></td><td><%= time_ago_in_words(event.created_at) %> ago</td></tr>
+    <% end %>
+    <% if @audit_events.empty? %><tr><td colspan="4" class="empty-state">No operator actions recorded yet.</td></tr><% end %>
+  </tbody></table></div>
+</section>

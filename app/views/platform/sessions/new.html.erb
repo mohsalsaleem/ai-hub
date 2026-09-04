@@ -1,0 +1,13 @@
+<% content_for :title, "Platform sign in · AI Hub" %>
+<div class="auth-card platform-auth-card">
+  <div class="auth-brand"><span class="brand-mark">A</span> AI Hub <small>Platform</small></div>
+  <span class="overline">Restricted operations</span>
+  <h1>Platform sign in</h1>
+  <p>Use your separate operator credentials. Tenant accounts cannot access this console.</p>
+  <%= form_with url: platform_session_path, class: "stack-form" do |form| %>
+    <label>Email<%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "username", value: params[:email_address] %></label>
+    <label>Password<%= form.password_field :password, required: true, autocomplete: "current-password", maxlength: 72 %></label>
+    <%= form.submit "Sign in to platform", class: "button" %>
+  <% end %>
+  <p class="auth-foot"><%= link_to "Back to tenant sign in", new_session_path %></p>
+</div>

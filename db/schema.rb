@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_120000) do
   create_table "hub_applications", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
@@ -76,6 +76,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_110000) do
     t.string "slug", null: false
     t.datetime "updated_at", null: false
     t.index ["slug"], name: "index_organizations_on_slug", unique: true
+  end
+
+  create_table "platform_audit_events", force: :cascade do |t|
+    t.string "action", null: false
+    t.datetime "created_at", null: false
+    t.json "details", default: {}, null: false
+    t.integer "platform_operator_id", null: false
+    t.string "request_ip"
+    t.integer "subject_id", null: false
+    t.string "subject_label", null: false
+    t.string "subject_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["platform_operator_id"], name: "index_platform_audit_events_on_platform_operator_id"
+    t.index ["subject_type", "subject_id", "created_at"], name: "index_platform_audits_on_subject"
+  end
+
+  create_table "platform_operators", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.string "email_address", null: false
+    t.string "password_digest", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email_address"], name: "index_platform_operators_on_email_address", unique: true
+  end
+
+  create_table "platform_sessions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "ip_address"
+    t.integer "platform_operator_id", null: false
+    t.datetime "updated_at", null: false
+    t.string "user_agent"
+    t.index ["platform_operator_id"], name: "index_platform_sessions_on_platform_operator_id"
   end
 
   create_table "routing_decisions", force: :cascade do |t|
@@ -176,9 +208,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_110000) do
     t.string "access_mode", default: "private", null: false
     t.datetime "created_at", null: false
     t.string "name", null: false
+    t.string "operator_status", default: "not_applicable", null: false
     t.integer "organization_id", null: false
     t.string "slug", null: false
     t.datetime "updated_at", null: false
+    t.index ["operator_status"], name: "index_worker_pools_on_operator_status"
     t.index ["organization_id", "slug"], name: "index_worker_pools_on_organization_id_and_slug", unique: true
     t.index ["organization_id"], name: "index_worker_pools_on_organization_id"
   end
@@ -233,6 +267,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_110000) do
   add_foreign_key "jobs", "workers"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
+  add_foreign_key "platform_audit_events", "platform_operators"
+  add_foreign_key "platform_sessions", "platform_operators"
   add_foreign_key "routing_decisions", "jobs"
   add_foreign_key "routing_decisions", "worker_pools", on_delete: :nullify
   add_foreign_key "routing_decisions", "workers", on_delete: :nullify

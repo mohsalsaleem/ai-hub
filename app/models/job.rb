@@ -56,7 +56,7 @@ class Job < ApplicationRecord
   end
 
   def routing_pool_matches_application
-    return if worker_pool.nil? || worker_pool.accessible_to?(hub_application&.organization)
+    return if worker_pool.nil? || worker_pool.routing_authorized_for?(hub_application&.organization)
 
     errors.add(:worker_pool, "is not available to the application organization")
   end

@@ -45,6 +45,17 @@ definitions, inspect jobs, and issue worker credentials. Plaintext application
 tokens and worker enrollment grants are shown once; AI Hub stores only their
 digests.
 
+Platform operations use separate identity and session tables. Tenant accounts
+cannot authenticate to the platform console. Create the first operator from a
+trusted Rails environment:
+
+```bash
+EMAIL=operator@example.com PASSWORD='use-a-long-password' bin/rails platform:create_operator
+```
+
+Sign in at `/platform/session/new`. The operator console exposes routing
+metadata and shared-capacity controls, never run inputs or outputs.
+
 For scripted bootstrapping instead, run:
 
 ```bash

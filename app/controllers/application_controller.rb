@@ -7,7 +7,7 @@ class ApplicationController < ActionController::Base
   stale_when_importmap_changes
 
   before_action :set_current_organization
-  helper_method :current_user, :current_organization, :current_membership, :owner?
+  helper_method :current_user, :current_organization, :current_membership, :owner?, :platform_console?
 
   private
 
@@ -15,6 +15,7 @@ class ApplicationController < ActionController::Base
   def current_organization = Current.organization
   def current_membership = @current_membership
   def owner? = current_membership&.owner?
+  def platform_console? = controller_path.start_with?("platform/")
 
   def set_current_organization
     return unless authenticated?

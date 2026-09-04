@@ -22,6 +22,7 @@ class WorkerPoolAccessGrantTest < ActiveSupport::TestCase
 
   test "revoking access clears future application routing" do
     pool = organizations(:one).worker_pools.create!(name: "Shared GPU", access_mode: "shared")
+    pool.transition_operator_status!("approved")
     grant = pool.worker_pool_access_grants.create!(organization: organizations(:two))
     application, = HubApplication.issue!(organization: organizations(:two), name: "Consumer", slug: "consumer")
     application.update!(worker_pool: pool, minimum_worker_trust: "external")

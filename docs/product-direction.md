@@ -316,6 +316,12 @@ Acceptance criteria:
   configuration.
 - Cross-organization access is denied unless an explicit grant exists.
 
+The operator foundation uses separate platform identity and session tables, not
+tenant users or memberships, and exposes an isolated console.
+Provider-owned shared pools begin in pending review and cannot route consumer
+runs until approved. Suspension and revocation are audited. The operator sees
+routing metadata but not run inputs, outputs, or task instructions.
+
 ### Milestone 5: Metering and rewards
 
 - Record immutable usage and outcome evidence per run.
