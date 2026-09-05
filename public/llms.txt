@@ -1,0 +1,137 @@
+# AI Hub
+
+> AI Hub is a self-hosted control plane that connects applications to private, OpenAI-compatible language models through outbound-only workers.
+
+Canonical origin: https://aihub.mohsal.dev
+Human documentation: https://aihub.mohsal.dev/docs
+Source and detailed protocol documentation: https://github.com/mohsalsaleem/ai-hub
+
+## Choose an integration
+
+- Use the OpenAI-compatible API for text chat and response integrations.
+- Use the native job API for durable, schema-validated structured generation.
+- MCP is planned but is not currently exposed.
+- Workers perform model inference only. They do not execute tools, uploaded code, or arbitrary application logic.
+
+## Authentication
+
+Create an application in the AI Hub console and copy its application token when shown. Send it as:
+
+Authorization: Bearer aih_...
+
+Application tokens can access only their own model profiles, task definitions, and runs. Keep tokens out of source control. Production requests must use HTTPS.
+
+## OpenAI-compatible API
+
+Base URL: https://aihub.mohsal.dev/v1
+
+- GET /v1/models — list active chat model profiles for the authenticated application.
+- POST /v1/chat/completions — create a synchronous, non-streaming text completion.
+- POST /v1/responses — create a synchronous response, or set `background: true` for a durable asynchronous response.
+- GET /v1/responses/:id — retrieve a durable response using the same application token.
+
+Model IDs are immutable application-scoped task references such as `assistant.general@1`. A request may omit `@version` to select the latest active version belonging to that application.
+
+Supported inputs are text `system`, `developer`, `user`, and `assistant` messages. Supported inference options are `temperature`, `top_p`, `stop`, and token limits. Responses also accept a top-level `instructions` string.
+
+Streaming, tool calls, images, files, audio, embeddings, conversation objects, and `previous_response_id` are not supported. Streaming requests fail explicitly.
+
+Synchronous calls wait for a worker for up to 60 seconds by default. A timed-out Chat Completions request returns HTTP 504 and includes the durable job ID; the job continues running. A synchronous Responses request that is still running returns HTTP 200 with `status: "in_progress"` and can be retrieved later by ID.
+
+Send an `Idempotency-Key` header when retrying a create request. Reusing it with identical parameters returns the original job. Reusing it with different parameters returns HTTP 409 with code `idempotency_conflict`.
+
+## Native job API
+
+Base URL: https://aihub.mohsal.dev/api/v1
+
+- POST /api/v1/task_definitions — publish an immutable structured task definition.
+- GET /api/v1/task_definitions — list the application's definitions.
+- POST /api/v1/jobs — submit a durable job with a task reference, idempotency key, and JSON input.
+- GET /api/v1/jobs/:id — retrieve job state and output.
+
+Job states are `queued`, `leased`, `completed`, `failed`, and `dead`. The first two are non-terminal. Applications should poll until a terminal state and apply completed output idempotently because execution is at least once.
+
+## Task definitions
+
+A task definition is an immutable, application-scoped contract between an application and a worker. It fixes the instructions, executor, input schema, output schema, and required worker capabilities for every run using that definition.
+
+Required fields for `POST /api/v1/task_definitions`:
+
+- `key` — 3 to 100 characters; starts with a lowercase letter and then uses lowercase letters, numbers, `_`, `.`, or `-`.
+- `version` — a positive integer, unique for the key inside the application.
+- `executor` — `structured_generation` or `chat_completion`; defaults to `structured_generation`.
+- `instructions` — non-empty model instructions, up to 20,000 characters.
+- `input_schema` — a valid JSON Schema describing accepted job input.
+- `output_schema` — a valid JSON Schema describing the worker's required output.
+- `requirements` — optional object whose truthy keys are worker capabilities required for routing.
+
+Example structured definition:
+
+```json
+{
+  "task_definition": {
+    "key": "document.summarize",
+    "version": 1,
+    "executor": "structured_generation",
+    "instructions": "Summarize the supplied text without inventing facts.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {"text": {"type": "string"}}
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary"],
+      "properties": {"summary": {"type": "string"}}
+    },
+    "requirements": {"json_schema": true}
+  }
+}
+```
+
+The create response includes the canonical `reference`, such as `document.summarize@1`, and a SHA-256 `digest`. Submit a run using that exact reference:
+
+```json
+{
+  "task": "document.summarize@1",
+  "idempotency_key": "summary-order-4815",
+  "input": {"text": "Text to summarize"}
+}
+```
+
+The Hub validates job input before queueing and validates worker output before completion. A worker must advertise the executor and every required capability before it can claim the run.
+
+Definitions cannot be edited after publication. When instructions, schemas, executor, or requirements change, publish the same key with a new version and update callers deliberately. Existing runs remain bound to their original version and digest.
+
+For `chat_completion`, AI Hub supplies its standard chat input and output schemas when they are omitted. Chat definitions appear as models through `/v1/models`; their task reference is also their OpenAI-compatible model ID.
+
+## Routing and privacy
+
+Applications select an allowed worker pool and minimum worker trust level, never an individual worker. A cross-organization run requires an approved provider-owned shared pool, an explicit consumer grant, provider participation, compatible capabilities, and accepted trust.
+
+Consumer APIs expose the selected pool and a general routing explanation but never worker, machine, provider-model, or provider-organization identity. The Hub and the selected worker necessarily receive plaintext request input and output.
+
+## Metering and credits
+
+Each claim attempt creates immutable execution evidence. Successful shared executions with provider-reported usage charge one internal credit per token. The provider receives 80% and AI Hub receives 20%, using integer accounting with the provider receiving any rounding remainder.
+
+Failed attempts, expired leases, private runs, and executions without reported usage are uncharged. Platform operators can post positive or negative organization adjustments, but cannot edit existing entries. Adjustments require a reason and record the operator in an immutable audit event. Credits are internal accounting units; payments, transfers, cash conversion, and payouts are not enabled.
+
+## Limits and failure handling
+
+- Job request and result payloads are limited to 256 KiB.
+- Task-definition API requests are limited to 96 KiB.
+- Workers use 180-second renewable leases and bounded retries.
+- Use a background Responses request for work that may exceed an HTTP timeout.
+- Preserve returned job IDs for recovery and support.
+
+## Detailed references
+
+- OpenAI-compatible integration: https://github.com/mohsalsaleem/ai-hub/blob/main/docs/openai-compatibility.md
+- Native protocol: https://github.com/mohsalsaleem/ai-hub/blob/main/docs/protocol.md
+- Worker identity: https://github.com/mohsalsaleem/ai-hub/blob/main/docs/worker-identity.md
+- Threat model: https://github.com/mohsalsaleem/ai-hub/blob/main/docs/threat-model.md
+- Product direction: https://github.com/mohsalsaleem/ai-hub/blob/main/docs/product-direction.md
+- Implementation status: https://github.com/mohsalsaleem/ai-hub/blob/main/docs/implementation-progress.md

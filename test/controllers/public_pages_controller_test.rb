@@ -21,6 +21,20 @@ class PublicPagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[target='_blank'][rel='noopener noreferrer']", 6
   end
 
+  test "llms documentation is public and describes the machine integration contract" do
+    get "/llms.txt"
+
+    assert_response :success
+    assert_equal "text/plain", response.media_type
+    assert_match "## OpenAI-compatible API", response.body
+    assert_match "## Native job API", response.body
+    assert_match "## Task definitions", response.body
+    assert_match "document.summarize@1", response.body
+    assert_match "Definitions cannot be edited after publication", response.body
+    assert_match "MCP is planned but is not currently exposed", response.body
+    assert_no_match(/aih_[0-9a-f]{48}/, response.body)
+  end
+
   test "signed-in visitors use the dashboard" do
     sign_in_as(users(:one))
 

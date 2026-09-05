@@ -115,3 +115,10 @@ Status: Complete and committed
 1. Complete and verify the internal credit ledger and reconciliation checks.
 2. Verify balance views, reconciliation, and operator adjustments in the browser.
 3. Keep payments and payouts deferred until ledger reconciliation is proven in production.
+
+## Agent integration
+
+- Public `/llms.txt`: Complete locally. It documents the implemented APIs,
+  authentication, lifecycle, limits, privacy boundary, and current credit model.
+- MCP application interface: Planned after the agent-readable HTTP contract is
+  deployed and verified.
