@@ -48,6 +48,37 @@ class TenantConsoleTest < ActionDispatch::IntegrationTest
     assert_select "a.nav-link.is-active", text: "Applications"
   end
 
+  test "owner opens and submits task definition forms" do
+    get new_application_task_definition_path(@application)
+    assert_response :success
+    assert_select "form[action='#{application_task_definitions_path(@application)}']"
+    assert_select "h1", "Publish a task definition"
+
+    get new_application_task_definition_path(@application, executor: "chat_completion")
+    assert_response :success
+    assert_select "form[action='#{application_task_definitions_path(@application)}']"
+    assert_select "h1", "Publish an OpenAI model profile"
+
+    assert_difference "@application.task_definitions.count", 1 do
+      post application_task_definitions_path(@application), params: { task_definition: {
+        key: "first.summary", version: 1, executor: "structured_generation", instructions: "Summarize.",
+        input_schema: '{"type":"object"}', output_schema: '{"type":"object"}'
+      } }
+    end
+    assert_redirected_to task_definition_path(@application.task_definitions.find_by!(key: "first.summary"))
+  end
+
+  test "invalid task definition rerenders its form" do
+    post application_task_definitions_path(@application), params: { task_definition: {
+      key: "first.invalid", version: 1, executor: "structured_generation", instructions: "Validate.",
+      input_schema: "not JSON", output_schema: '{"type":"object"}'
+    } }
+
+    assert_response :unprocessable_entity
+    assert_select "form[action='#{application_task_definitions_path(@application)}']"
+    assert_select ".error-box", text: /Schemas must contain valid JSON/
+  end
+
   test "owner creates an application and sees its token once" do
     assert_difference "organizations(:one).hub_applications.count", 1 do
       post applications_path, params: { hub_application: { name: "Created App", slug: "created-app" } }
