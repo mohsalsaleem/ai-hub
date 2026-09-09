@@ -213,7 +213,7 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
 
   test "workers claim only inside their availability schedule" do
     job = @application.jobs.create!(task_definition: @definition,
-      idempotency_key: "scheduled-worker", input: { text: "Private" })
+      idempotency_key: "scheduled-worker", input: { text: "Private" }, available_at: Time.utc(2026, 9, 7, 9, 0))
     @worker.update!(availability_timezone: "UTC", availability_days: [ "monday" ],
       availability_starts_at: "09:00", availability_ends_at: "10:00")
 

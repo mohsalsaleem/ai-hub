@@ -1,0 +1,18 @@
+<% content_for :title, "Account security · AI Hub" %>
+<%= render "shared/page_header", title: "Account security", description: "Manage how you sign in to your AI Hub account." %>
+<section class="panel section-block">
+  <span class="overline">Your account</span>
+  <h2>Homebase sign-in</h2>
+  <% if !HomebaseSettings.enabled? %>
+    <p class="body-copy">Homebase sign-in is not available yet. Continue using your AI Hub password.</p>
+  <% elsif current_user.external_identities.exists?(issuer: HomebaseSettings.issuer) %>
+    <p class="body-copy">Homebase is linked to your AI Hub account. You can sign in using Homebase or your existing password.</p>
+  <% else %>
+    <p class="body-copy">Connect Homebase to this account. Your organizations, applications and hosting access stay the same.</p>
+    <%= form_with url: homebase_link_path, class: "stack-form", data: { turbo: false } do |form| %>
+      <%= form.label :password, "Current AI Hub password" %>
+      <%= form.password_field :password, required: true, autocomplete: "current-password" %>
+      <%= form.submit "Link Homebase", class: "button" %>
+    <% end %>
+  <% end %>
+</section>

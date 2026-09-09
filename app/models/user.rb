@@ -2,6 +2,7 @@ class User < ApplicationRecord
   attr_accessor :organization_name
 
   has_secure_password
+  has_many :external_identities, dependent: :destroy
   has_many :sessions, dependent: :destroy
   has_many :memberships, dependent: :destroy
   has_many :organizations, through: :memberships

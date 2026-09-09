@@ -1,0 +1,5 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="viewport" content="width=device-width, initial-scale=1"><title><%= title %> · AI Hub</title><%= csrf_meta_tags %><%= stylesheet_link_tag :app %></head>
+<body><main class="auth-shell"><section class="auth-card"><h1><%= title %></h1><p><%= message %></p><%= link_to "Sign in with your AI Hub password", new_session_path, class: "button" %><%= button_to "Sign out", session_path, method: :delete, class: "text-button" %></section></main></body>
+</html>

@@ -1,4 +1,8 @@
 Rails.application.routes.draw do
+  get "auth/homebase", to: "homebase#login", as: :homebase_login
+  post "auth/homebase/link", to: "homebase#link", as: :homebase_link
+  get "auth/homebase/callback", to: "homebase#callback", as: :homebase_callback
+  get "account/security", to: "account_security#show", as: :account_security
   resource :registration, only: %i[new create]
   resource :session, only: %i[new create destroy]
   resource :organization, only: %i[new create show update]

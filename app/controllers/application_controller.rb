@@ -6,6 +6,16 @@ class ApplicationController < ActionController::Base
   # Changes to the importmap will invalidate the etag for HTML responses
   stale_when_importmap_changes
 
+  rescue_from HomebaseAccess::Unavailable do
+    response.headers["Cache-Control"] = "no-store"
+    render "homebase/unavailable", status: :service_unavailable, layout: false
+  end
+  rescue_from HomebaseAccess::Denied do
+    response.headers["Cache-Control"] = "no-store"
+    render "homebase/denied", status: :forbidden, layout: false
+  end
+
+  before_action -> { response.headers["Cache-Control"] = "no-store" }
   before_action :set_current_organization
   helper_method :current_user, :current_organization, :current_membership, :owner?, :platform_console?
 

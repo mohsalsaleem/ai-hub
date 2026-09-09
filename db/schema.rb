@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_09_120000) do
   create_table "credit_ledger_entries", force: :cascade do |t|
     t.bigint "amount", null: false
     t.datetime "created_at", null: false
@@ -28,6 +28,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_150000) do
     t.index ["organization_id", "created_at"], name: "index_credit_ledger_entries_on_organization_id_and_created_at"
     t.index ["organization_id"], name: "index_credit_ledger_entries_on_organization_id"
     t.index ["platform_operator_id"], name: "index_credit_ledger_entries_on_platform_operator_id"
+  end
+
+  create_table "external_identities", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "issuer", null: false
+    t.string "subject", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["issuer", "subject"], name: "index_external_identities_on_issuer_and_subject", unique: true
+    t.index ["user_id", "issuer"], name: "index_external_identities_on_user_id_and_issuer", unique: true
+    t.index ["user_id"], name: "index_external_identities_on_user_id"
+  end
+
+  create_table "homebase_login_transactions", force: :cascade do |t|
+    t.bigint "browser_session_id"
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.string "issuer", null: false
+    t.string "nonce", null: false
+    t.string "purpose", null: false
+    t.string "return_to", null: false
+    t.string "state", null: false
+    t.string "token_digest", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id"
+    t.string "verifier", null: false
+    t.index ["expires_at"], name: "index_homebase_login_transactions_on_expires_at"
+    t.index ["token_digest"], name: "index_homebase_login_transactions_on_token_digest", unique: true
   end
 
   create_table "hub_applications", force: :cascade do |t|
@@ -185,6 +213,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_150000) do
 
   create_table "sessions", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.datetime "homebase_expires_at"
+    t.string "homebase_issuer"
+    t.string "homebase_subject"
+    t.text "homebase_tokens"
     t.string "ip_address"
     t.datetime "updated_at", null: false
     t.string "user_agent"
@@ -320,6 +352,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_150000) do
   add_foreign_key "credit_ledger_entries", "job_executions"
   add_foreign_key "credit_ledger_entries", "organizations"
   add_foreign_key "credit_ledger_entries", "platform_operators"
+  add_foreign_key "external_identities", "users"
   add_foreign_key "hub_applications", "organizations"
   add_foreign_key "hub_applications", "worker_pools"
   add_foreign_key "job_executions", "jobs"

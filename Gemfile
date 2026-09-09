@@ -54,3 +54,6 @@ group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"
 end
+
+# Optional Homebase browser identity.
+gem "openid_connect", "~> 2.3"
