@@ -86,6 +86,25 @@ class JobProtocolTest < ActionDispatch::IntegrationTest
     assert_equal "completed", response.parsed_body.fetch("status")
   end
 
+  test "archiving blocks new jobs without interrupting an existing job" do
+    job = @application.jobs.create!(task_definition: @definition, idempotency_key: "before-archive",
+      input: { text: "Finish me" })
+    @definition.update!(active: false)
+
+    post api_v1_jobs_path, headers: application_headers, as: :json,
+      params: { task: @definition.reference, idempotency_key: "after-archive", input: { text: "Reject me" } }
+    assert_response :unprocessable_entity
+    assert_equal "unknown_task_definition", response.parsed_body.fetch("error")
+
+    post api_v1_worker_claims_path, headers: worker_headers, as: :json
+    assert_response :success
+    assert_equal job.public_id, response.parsed_body.dig("job", "id")
+
+    get api_v1_worker_task_definition_path(@definition.digest), headers: worker_headers
+    assert_response :success
+    assert_equal @definition.reference, "#{response.parsed_body.fetch('key')}@#{response.parsed_body.fetch('version')}"
+  end
+
   test "stale leases and schema-invalid output are rejected" do
     job = @application.jobs.create!(task_definition: @definition, idempotency_key: "two", input: { text: "Hello" })
     post api_v1_worker_claims_path, headers: worker_headers, as: :json

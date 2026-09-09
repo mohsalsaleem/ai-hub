@@ -1,5 +1,6 @@
 class TaskDefinitionsController < ApplicationController
-  before_action :require_owner!, only: %i[new create]
+  before_action :require_owner!, only: %i[new create archive restore]
+  before_action :set_definition, only: %i[show archive restore]
 
   def index
     @definitions = current_organization.task_definitions.includes(:hub_application)
@@ -7,7 +8,6 @@ class TaskDefinitionsController < ApplicationController
   end
 
   def show
-    @definition = current_organization.task_definitions.includes(:hub_application).find(params[:id])
   end
 
   def new
@@ -33,7 +33,21 @@ class TaskDefinitionsController < ApplicationController
     render :new, status: :unprocessable_entity
   end
 
+  def archive
+    @definition.update!(active: false)
+    redirect_to task_definition_path(@definition), notice: "#{@definition.reference} archived. New runs can no longer use it."
+  end
+
+  def restore
+    @definition.update!(active: true)
+    redirect_to task_definition_path(@definition), notice: "#{@definition.reference} restored."
+  end
+
   private
+
+  def set_definition
+    @definition = current_organization.task_definitions.includes(:hub_application).find(params[:id])
+  end
 
   def definition_params
     params.require(:task_definition).permit(:key, :version, :executor, :instructions,

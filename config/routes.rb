@@ -17,7 +17,10 @@ Rails.application.routes.draw do
     patch :revoke, on: :member
     resources :task_definitions, only: %i[new create]
   end
-  resources :task_definitions, only: %i[index show]
+  resources :task_definitions, only: %i[index show] do
+    patch :archive, on: :member
+    patch :restore, on: :member
+  end
   resources :jobs, only: %i[index show]
   resources :workers, only: %i[index create update destroy] do
     post :rotate_token, on: :member

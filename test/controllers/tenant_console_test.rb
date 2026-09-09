@@ -33,6 +33,12 @@ class TenantConsoleTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "nav[aria-label='Application sections'] a.is-active", text: "Task definitions"
     assert_select "a", text: definition.reference
+    assert_select ".definition-choice", count: 2
+    assert_select ".definition-choice", text: /Structured generation.*structured_generation.*\/api\/v1\/jobs/m
+    assert_select ".definition-choice", text: /Chat completion.*chat_completion.*\/v1\/responses/m
+    assert_select "a", text: "Create structured generation task"
+    assert_select "a", text: "Create chat completion model"
+    assert_select ".executor-cell", text: /Structured generation.*structured_generation.*\/api\/v1\/jobs/m
 
     get jobs_application_path(@application)
     assert_response :success
@@ -52,12 +58,18 @@ class TenantConsoleTest < ActionDispatch::IntegrationTest
     get new_application_task_definition_path(@application)
     assert_response :success
     assert_select "form[action='#{application_task_definitions_path(@application)}']"
-    assert_select "h1", "Publish a task definition"
+    assert_select "h1", "Publish structured generation"
+    assert_select ".executor-summary", text: /structured_generation.*\/api\/v1\/jobs/m
+    assert_select "label", text: /Task key/
+    assert_select "input[type='submit'][value='Publish structured generation']"
 
     get new_application_task_definition_path(@application, executor: "chat_completion")
     assert_response :success
     assert_select "form[action='#{application_task_definitions_path(@application)}']"
-    assert_select "h1", "Publish an OpenAI model profile"
+    assert_select "h1", "Publish chat completion"
+    assert_select ".executor-summary", text: /chat_completion.*\/v1\/responses/m
+    assert_select "label", text: /Model key/
+    assert_select "input[type='submit'][value='Publish chat completion']"
 
     assert_difference "@application.task_definitions.count", 1 do
       post application_task_definitions_path(@application), params: { task_definition: {
@@ -77,6 +89,38 @@ class TenantConsoleTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_select "form[action='#{application_task_definitions_path(@application)}']"
     assert_select ".error-box", text: /Schemas must contain valid JSON/
+  end
+
+  test "owner archives and restores a task definition" do
+    definition = @application.task_definitions.create!(key: "first.archive", version: 1,
+      instructions: "Archive safely.", input_schema: { type: "object" }, output_schema: { type: "object" })
+
+    patch archive_task_definition_path(definition)
+    assert_redirected_to task_definition_path(definition)
+    assert_not definition.reload.active?
+
+    follow_redirect!
+    assert_select ".badge", "Archived"
+    assert_select ".archived-notice", text: /New runs cannot use this reference/
+    assert_select "form[action='#{restore_task_definition_path(definition)}']"
+
+    patch restore_task_definition_path(definition)
+    assert_redirected_to task_definition_path(definition)
+    assert definition.reload.active?
+  end
+
+  test "member cannot archive a task definition" do
+    definition = @application.task_definitions.create!(key: "first.protected", version: 1,
+      instructions: "Stay active.", input_schema: { type: "object" }, output_schema: { type: "object" })
+    member = User.create!(email_address: "definition-member@example.com", password: "password")
+    organizations(:one).memberships.create!(user: member, role: "member")
+    sign_out
+    sign_in_as(member)
+
+    patch archive_task_definition_path(definition)
+
+    assert_redirected_to dashboard_path
+    assert definition.reload.active?
   end
 
   test "owner creates an application and sees its token once" do

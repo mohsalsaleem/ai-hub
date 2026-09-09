@@ -20,6 +20,19 @@ class OpenaiCompatibilityTest < ActionDispatch::IntegrationTest
     assert_equal [ "assistant.general@1" ], response.parsed_body.fetch("data").pluck("id")
   end
 
+  test "archived chat definitions are unavailable to new requests" do
+    @definition.update!(active: false)
+
+    get "/v1/models", headers: headers
+    assert_response :success
+    assert_empty response.parsed_body.fetch("data")
+
+    post "/v1/responses", headers: headers, as: :json,
+      params: { model: @definition.reference, input: "Hello", background: true }
+    assert_response :not_found
+    assert_equal 0, @application.jobs.count
+  end
+
   test "creates and retrieves a background response" do
     post "/v1/responses", headers: headers, as: :json,
       params: { model: "assistant.general", input: "Hello", background: true }
