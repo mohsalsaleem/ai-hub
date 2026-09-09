@@ -4,6 +4,11 @@
     <title><%= content_for(:title) || "AI Hub" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="application-name" content="AI Hub">
+    <meta name="theme-color" content="#0c0d11">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.webmanifest">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
@@ -15,7 +20,7 @@
       <% if platform_authenticated? %>
       <div class="app-frame platform-frame">
         <aside class="sidebar platform-sidebar">
-          <div class="brand"><span>AI Hub</span><small>Platform</small></div>
+          <div class="brand"><%= render "shared/brand_mark" %><span>AI Hub</span><small>Platform</small></div>
           <div class="org-block"><span class="overline">Operations</span><strong>Platform console</strong><span>Cross-tenant controls</span></div>
           <nav class="nav-stack" aria-label="Platform navigation">
             <div class="nav-primary">
@@ -39,7 +44,7 @@
     <% elsif authenticated? && current_organization %>
       <div class="app-frame">
         <aside class="sidebar">
-          <div class="brand"><span>AI Hub</span></div>
+          <div class="brand"><%= render "shared/brand_mark" %><span>AI Hub</span></div>
           <div class="org-block"><span class="overline">Organization</span><strong><%= current_organization.name %></strong><span><%= owner? ? "Owner" : "Member" %></span></div>
           <nav class="nav-stack" aria-label="Main navigation">
             <div class="nav-primary">

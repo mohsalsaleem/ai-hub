@@ -1,5 +1,5 @@
 <header class="site-header">
-  <%= link_to root_path, class: "site-brand", aria: { label: "AI Hub home" } do %><span class="brand-mark">A</span><span>AI Hub</span><% end %>
+  <%= link_to root_path, class: "site-brand", aria: { label: "AI Hub home" } do %><%= render "shared/brand_mark" %><span>AI Hub</span><% end %>
   <nav class="site-nav" aria-label="Public navigation">
     <%= link_to "Docs", docs_path %>
     <% if authenticated? %>

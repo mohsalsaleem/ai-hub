@@ -9,6 +9,21 @@ class PublicPagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href='#{docs_path}']", minimum: 1
     assert_select "a[href='#{new_registration_path}']", minimum: 1
     assert_select "a[href='https://github.com/mohsalsaleem/ai-hub'][target='_blank'][rel='noopener noreferrer']", 1
+    assert_select ".site-brand svg.brand-mark[aria-hidden='true']", 1
+    assert_select "link[rel='icon'][href='/icon.svg'][type='image/svg+xml']", 1
+    assert_select "link[rel='icon'][href='/favicon.ico']", 1
+    assert_select "link[rel='apple-touch-icon'][href='/apple-touch-icon.png']", 1
+    assert_select "link[rel='manifest'][href='/manifest.webmanifest']", 1
+  end
+
+  test "browser and installable app icons are present" do
+    %w[icon.svg icon.png icon-192.png icon-maskable.png apple-touch-icon.png favicon.ico manifest.webmanifest].each do |asset|
+      assert File.exist?(Rails.public_path.join(asset)), "Expected public/#{asset} to exist"
+    end
+
+    manifest = JSON.parse(Rails.public_path.join("manifest.webmanifest").read)
+    assert_equal "AI Hub", manifest.fetch("name")
+    assert_equal "#0c0d11", manifest.fetch("theme_color")
   end
 
   test "documentation is public and includes the integration contract" do
