@@ -69,6 +69,7 @@ class ExecutorTest < ActiveSupport::TestCase
     assert_equal "local-chat", captured.fetch("model")
     assert_equal "Be concise.", captured.fetch("messages").first.fetch("content")
     assert_nil captured["response_format"]
+    assert_nil captured["chat_template_kwargs"]
   end
 
   test "combines leading system messages without mutating client input" do
@@ -96,6 +97,28 @@ class ExecutorTest < ActiveSupport::TestCase
     assert_equal [ { "role" => "system", "content" => "Profile rules.\n\nExtract facts.\n\nReturn JSON." },
       { "role" => "user", "content" => "Resume" } ], captured.fetch("messages")
     assert_equal original, input
+  end
+
+  test "forwards the requested strict JSON schema to the model" do
+    config = AiHubWorker::Config.new(hub_url: "http://hub", worker_token: "token", worker_id: "worker",
+      model_url: "http://model.test/v1", model: "local-chat", model_api_key: "local",
+      state_path: "/tmp/state", poll_wait_seconds: 0)
+    captured = nil
+    response = FakeResponse.new("200", JSON.generate(choices: [ { message: { content: "{}" }, finish_reason: "stop" } ]))
+    executor = AiHubWorker::Executor.new(config, chat_template_kwargs: { "enable_thinking" => false }, transport: lambda { |request, _uri|
+      captured = JSON.parse(request.body)
+      response
+    })
+    definition = { "key" => "resume.extract", "executor" => "chat_completion", "instructions" => "Extract.",
+      "input_schema" => TaskDefinition::CHAT_INPUT_SCHEMA.deep_stringify_keys,
+      "output_schema" => TaskDefinition::CHAT_OUTPUT_SCHEMA.deep_stringify_keys }
+    format = { "type" => "json_schema", "json_schema" => { "name" => "resume", "strict" => true,
+      "schema" => { "type" => "object", "additionalProperties" => false } } }
+    executor.execute(definition, { "messages" => [ { "role" => "user", "content" => "Synthetic resume" } ],
+      "response_format" => format, "presence_penalty" => 1.5 })
+    assert_equal format, captured.fetch("response_format")
+    assert_equal 1.5, captured.fetch("presence_penalty")
+    assert_equal({ "enable_thinking" => false }, captured.fetch("chat_template_kwargs"))
   end
 
   test "attaches measured usage metadata to a model failure" do

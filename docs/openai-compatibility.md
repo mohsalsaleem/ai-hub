@@ -77,7 +77,23 @@ control. Production clients must use HTTPS.
 
 Text `system`, `developer`, `user`, and `assistant` messages are supported.
 The compatibility layer forwards `temperature`, `top_p`, `stop`, and token
-limits. Responses requests also accept a top-level `instructions` string.
+limits. It also forwards `response_format` with `type: "json_schema"` to the model
+worker, preserving its `name`, `description`, `strict`, and `schema` fields.
+The local inference server must support JSON-schema output. Chat Completions
+returns `prompt_tokens`, `completion_tokens`, and `total_tokens` usage fields.
+Responses requests also accept a top-level `instructions` string.
+
+Existing published model profiles are immutable. To use `response_format`,
+publish a new profile version with the updated default chat input schema;
+older closed schemas reject the new parameter rather than silently ignoring it.
+Upgrade workers as well as the Hub before enabling this option.
+
+For local servers that support chat-template options, the worker accepts
+`AI_MODEL_CHAT_TEMPLATE_KWARGS` as a JSON object. For example, Qwen deployments
+can use `AI_MODEL_CHAT_TEMPLATE_KWARGS='{"enable_thinking":false}'` to keep
+structured extraction within its generation budget. This is a worker-side
+setting, not a client-supplied parameter. It is omitted by default; confirm
+support in the inference server before configuring it.
 
 Streaming, tool calls, images, files, audio, embeddings, conversation objects,
 and `previous_response_id` are not supported yet. Requests for streaming fail

@@ -13,8 +13,24 @@ class TaskDefinition < ApplicationRecord
       } },
       temperature: { type: "number", minimum: 0, maximum: 2 },
       top_p: { type: "number", minimum: 0, maximum: 1 },
+      presence_penalty: { type: "number", minimum: -2, maximum: 2 },
       max_tokens: { type: "integer", minimum: 1 },
-      stop: { type: [ "string", "array" ], items: { type: "string" } }
+      stop: { type: [ "string", "array" ], items: { type: "string" } },
+      response_format: {
+        type: "object", additionalProperties: false, required: %w[type json_schema],
+        properties: {
+          type: { type: "string", const: "json_schema" },
+          json_schema: {
+            type: "object", additionalProperties: false, required: %w[name schema],
+            properties: {
+              name: { type: "string", minLength: 1 },
+              description: { type: "string" },
+              strict: { type: "boolean" },
+              schema: { type: "object" }
+            }
+          }
+        }
+      }
     }
   }.freeze
   CHAT_OUTPUT_SCHEMA = {

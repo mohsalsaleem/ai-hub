@@ -19,10 +19,11 @@ module Openai
 
       def completion_json(job, definition)
         output = job.output
+        usage = canonical_response_usage(job)
         { id: "chatcmpl_#{job.public_id.delete_prefix('job_')}", object: "chat.completion",
           created: job.created_at.to_i, model: definition.reference,
           choices: [ { index: 0, message: { role: "assistant", content: output.fetch("content") },
-                       finish_reason: output["finish_reason"] || "stop" } ], usage: canonical_response_usage(job) }
+                       finish_reason: output["finish_reason"] || "stop" } ], usage: { prompt_tokens: usage[:input_tokens], completion_tokens: usage[:output_tokens], total_tokens: usage[:total_tokens] } }
       end
     end
   end
