@@ -9,13 +9,13 @@ module AiHubWorker
 
     def fetch(digest)
       path = File.join(@path, "#{digest}.json")
-      return JSON.parse(File.read(path)) if File.exist?(path)
+      return JSON.parse(File.binread(path).force_encoding(Encoding::UTF_8)) if File.exist?(path)
 
       definition = yield
       raise "Definition digest mismatch" unless definition.fetch("digest") == digest
 
       temporary = "#{path}.#{Process.pid}.tmp"
-      File.write(temporary, JSON.generate(definition), mode: "w", perm: 0o600)
+      File.write(temporary, JSON.generate(definition), mode: "w:UTF-8", perm: 0o600)
       File.rename(temporary, path)
       definition
     end

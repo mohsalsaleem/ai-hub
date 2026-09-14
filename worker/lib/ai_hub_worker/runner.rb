@@ -59,7 +59,7 @@ module AiHubWorker
       enqueue(job.fetch("id"), "complete", lease_token:, output:, usage:)
     rescue StandardError => e
       enqueue(job.fetch("id"), "fail", lease_token:,
-        error: { code: "execution_failed", message: e.message.to_s.first(500), retryable: true },
+        error: { code: "execution_failed", message: e.message.to_s[0, 500], retryable: true },
         usage: e.respond_to?(:usage) ? e.usage : nil)
     ensure
       renewer&.kill
