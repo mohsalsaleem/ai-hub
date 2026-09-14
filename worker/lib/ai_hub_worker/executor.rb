@@ -75,8 +75,12 @@ module AiHubWorker
       request["Authorization"] = "Bearer #{@api_key}"
       request["Content-Type"] = "application/json"
       messages = input.fetch("messages").dup
-      instructions = definition.fetch("instructions").to_s
-      messages.unshift({ "role" => "system", "content" => instructions }) if instructions.length.positive?
+      instructions = [ definition.fetch("instructions").to_s ]
+      # Local chat templates may allow only one leading system message. Keep profile
+      # instructions first and preserve client instruction order without mutating input.
+      instructions << messages.shift.fetch("content") while messages.first&.fetch("role") == "system"
+      instructions.reject!(&:empty?)
+      messages.unshift({ "role" => "system", "content" => instructions.join("\n\n") }) if instructions.any?
       request.body = JSON.generate({ model: @model, messages: }.merge(input.slice("temperature", "top_p", "max_tokens", "stop")))
       response = @transport.call(request, uri)
       raise Error, "Model returned HTTP #{response.code}" unless response.code.to_i.between?(200, 299)

@@ -71,6 +71,33 @@ class ExecutorTest < ActiveSupport::TestCase
     assert_nil captured["response_format"]
   end
 
+  test "combines leading system messages without mutating client input" do
+    config = AiHubWorker::Config.new(hub_url: "http://hub", worker_token: "token", worker_id: "worker",
+      model_url: "http://model.test/v1", model: "local-chat", model_api_key: "local",
+      state_path: "/tmp/state", poll_wait_seconds: 0)
+    captured = nil
+    response = FakeResponse.new("200", JSON.generate(choices: [ { message: { content: "{}" }, finish_reason: "stop" } ]))
+    executor = AiHubWorker::Executor.new(config, transport: lambda { |request, _uri|
+      captured = JSON.parse(request.body)
+      response
+    })
+    definition = {
+      "key" => "resume.extract", "executor" => "chat_completion", "instructions" => "Profile rules.",
+      "input_schema" => TaskDefinition::CHAT_INPUT_SCHEMA.deep_stringify_keys,
+      "output_schema" => TaskDefinition::CHAT_OUTPUT_SCHEMA.deep_stringify_keys
+    }
+    messages = [ { "role" => "system", "content" => "Extract facts." },
+      { "role" => "system", "content" => "Return JSON." }, { "role" => "user", "content" => "Resume" } ]
+    input = { "messages" => messages }
+    original = Marshal.load(Marshal.dump(input))
+
+    executor.execute(definition, input)
+
+    assert_equal [ { "role" => "system", "content" => "Profile rules.\n\nExtract facts.\n\nReturn JSON." },
+      { "role" => "user", "content" => "Resume" } ], captured.fetch("messages")
+    assert_equal original, input
+  end
+
   test "attaches measured usage metadata to a model failure" do
     config = AiHubWorker::Config.new(hub_url: "http://hub", worker_token: "token", worker_id: "worker",
       model_url: "http://model.test/v1", model: "local-model", model_api_key: "local",
