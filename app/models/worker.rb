@@ -69,10 +69,11 @@ class Worker < ApplicationRecord
     end
   end
 
-  def seen!(reported_id:, version:, capabilities:)
+  def seen!(reported_id:, version:, capabilities:, model_name: nil)
     update_columns(
       reported_id: reported_id.to_s.first(100).presence,
       version: version.to_s.first(60).presence,
+      reported_model: model_name.to_s.first(200).presence,
       capabilities: Array(capabilities).map { |value| value.to_s.first(100) }.uniq.first(50),
       last_seen_at: Time.current
     )

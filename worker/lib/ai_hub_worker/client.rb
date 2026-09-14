@@ -15,6 +15,7 @@ module AiHubWorker
       @base = URI(config.hub_url.sub(%r{/+\z}, ""))
       @token = config.worker_token
       @worker_id = config.worker_id
+      @model = config.model
       @identity = Identity.new(config.state_path)
       @http_start = http_start
     end
@@ -54,6 +55,7 @@ module AiHubWorker
       request["Content-Type"] = "application/json"
       request["X-Worker-Id"] = @worker_id
       request["X-Worker-Version"] = AiHubWorker::VERSION
+      request["X-Worker-Model"] = @model
       request["X-Worker-Capabilities"] = "structured_generation,chat_completion"
       body = payload ? JSON.generate(payload) : ""
       request.body = body if payload

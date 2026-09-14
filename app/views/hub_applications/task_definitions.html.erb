@@ -1,9 +1,9 @@
-<% content_for :title, "Task definitions · #{@application.name} · AI Hub" %>
+<% content_for :title, "Tasks & models · #{@application.name} · AI Hub" %>
 <%= render "header", application: @application %>
 
 <section class="section-block section-block-first">
   <div class="section-head">
-    <div><span class="overline">Application resources</span><h2>Task definitions</h2></div>
+    <div><span class="overline">Application resources</span><h2>Tasks & models</h2><p>Publish versioned structured tasks and OpenAI-compatible model profiles.</p></div>
   </div>
   <% if owner? %>
     <div class="definition-choice-grid">

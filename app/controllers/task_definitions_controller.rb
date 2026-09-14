@@ -8,10 +8,21 @@ class TaskDefinitionsController < ApplicationController
   end
 
   def show
+    @versions = @definition.hub_application.task_definitions.where(key: @definition.key).order(version: :desc)
   end
 
   def new
     @application = current_organization.hub_applications.find(params[:application_id])
+    if params[:from].present?
+      source = @application.task_definitions.find(params[:from])
+      @definition = @application.task_definitions.new(key: source.key, version: next_version_for(source),
+        executor: source.executor, instructions: source.instructions,
+        input_schema: source.input_schema.deep_dup, output_schema: source.output_schema.deep_dup,
+        requirements: source.requirements.deep_dup)
+      @source_definition = source
+      return
+    end
+
     executor = params[:executor].presence_in(TaskDefinition::EXECUTORS) || "structured_generation"
     @definition = @application.task_definitions.new(version: 1, executor:,
       input_schema: executor == "chat_completion" ? TaskDefinition::CHAT_INPUT_SCHEMA : default_schema,
@@ -20,13 +31,14 @@ class TaskDefinitionsController < ApplicationController
 
   def create
     @application = current_organization.hub_applications.find(params[:application_id])
-    @definition = @application.task_definitions.new(definition_params.except(:input_schema, :output_schema))
+    @definition = @application.task_definitions.new(definition_params.except(:input_schema, :output_schema, :requirements))
     @definition.input_schema = parse_schema(:input_schema)
     @definition.output_schema = parse_schema(:output_schema)
+    @definition.requirements = parse_schema(:requirements) if definition_params[:requirements].present?
     @definition.save!
     redirect_to task_definition_path(@definition), notice: "#{@definition.reference} published."
   rescue JSON::ParserError => e
-    @definition ||= @application.task_definitions.new(definition_params.except(:input_schema, :output_schema))
+    @definition ||= @application.task_definitions.new(definition_params.except(:input_schema, :output_schema, :requirements))
     @definition.errors.add(:base, "Schemas must contain valid JSON: #{e.message}")
     render :new, status: :unprocessable_entity
   rescue ActiveRecord::RecordInvalid
@@ -51,9 +63,10 @@ class TaskDefinitionsController < ApplicationController
 
   def definition_params
     params.require(:task_definition).permit(:key, :version, :executor, :instructions,
-      :input_schema, :output_schema)
+      :input_schema, :output_schema, :requirements)
   end
 
   def parse_schema(key) = JSON.parse(definition_params.fetch(key))
   def default_schema = { type: "object", additionalProperties: false, properties: {} }
+  def next_version_for(source) = @application.task_definitions.where(key: source.key).maximum(:version).to_i + 1
 end

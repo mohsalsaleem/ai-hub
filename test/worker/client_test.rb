@@ -33,6 +33,7 @@ class WorkerClientTest < ActiveSupport::TestCase
         "aihub-worker-enrollment/v1\n#{fingerprint}")
       assert_nil claim["Authorization"]
       assert_equal fingerprint, claim["X-Worker-Key-Id"]
+      assert_equal "model", claim["X-Worker-Model"]
 
       canonical = WorkerRequestSignature.canonical(method: "POST", path: "/api/v1/worker/claims",
         timestamp: claim["X-Worker-Timestamp"], nonce: claim["X-Worker-Nonce"], body: claim.body)

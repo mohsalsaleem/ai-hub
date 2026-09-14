@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_09_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_14_120000) do
   create_table "credit_ledger_entries", force: :cascade do |t|
     t.bigint "amount", null: false
     t.datetime "created_at", null: false
@@ -339,6 +339,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_09_120000) do
     t.datetime "paused_at"
     t.text "public_key_pem"
     t.string "reported_id"
+    t.string "reported_model"
     t.string "token_digest", null: false
     t.string "token_hint"
     t.string "trust_tier", default: "owner", null: false

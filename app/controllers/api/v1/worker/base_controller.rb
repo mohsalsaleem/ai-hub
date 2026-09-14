@@ -17,7 +17,8 @@ module Api
           return render json: { error: "invalid_worker_identity" }, status: :unauthorized unless @current_worker
 
           @current_worker.seen!(reported_id: request.headers["X-Worker-Id"],
-            version: request.headers["X-Worker-Version"], capabilities: request.headers["X-Worker-Capabilities"].to_s.split(","))
+            version: request.headers["X-Worker-Version"], model_name: request.headers["X-Worker-Model"],
+            capabilities: request.headers["X-Worker-Capabilities"].to_s.split(","))
         rescue WorkerRequestSignature::Replay => e
           render json: { error: e.message }, status: :conflict
         rescue WorkerRequestSignature::Error

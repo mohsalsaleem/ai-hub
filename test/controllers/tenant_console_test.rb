@@ -27,11 +27,11 @@ class TenantConsoleTest < ActionDispatch::IntegrationTest
 
     get application_path(@application)
     assert_response :success
-    assert_select "nav[aria-label='Application sections']", text: /Task definitions/
+    assert_select "nav[aria-label='Application sections']", text: /Tasks & models/
 
     get task_definitions_application_path(@application)
     assert_response :success
-    assert_select "nav[aria-label='Application sections'] a.is-active", text: "Task definitions"
+    assert_select "nav[aria-label='Application sections'] a.is-active", text: "Tasks & models"
     assert_select "a", text: definition.reference
     assert_select ".definition-choice", count: 2
     assert_select ".definition-choice", text: /Structured generation.*structured_generation.*\/api\/v1\/jobs/m
@@ -50,7 +50,9 @@ class TenantConsoleTest < ActionDispatch::IntegrationTest
 
     get task_definition_path(definition)
     assert_response :success
-    assert_select "nav[aria-label='Breadcrumb']", text: /Applications.*First App.*Task definitions/m
+    assert_select "nav[aria-label='Breadcrumb']", text: /Applications.*First App.*Tasks & models/m
+    assert_select "a[aria-current='page']", text: "v1"
+    assert_select "a", text: "Publish new version"
     assert_select "a.nav-link.is-active", text: "Applications"
   end
 
@@ -89,6 +91,31 @@ class TenantConsoleTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_select "form[action='#{application_task_definitions_path(@application)}']"
     assert_select ".error-box", text: /Schemas must contain valid JSON/
+  end
+
+  test "owner publishes a prefilled next version" do
+    original = @application.task_definitions.create!(key: "first.extract", version: 2,
+      executor: "structured_generation", instructions: "Extract carefully.",
+      input_schema: { type: "object", required: [ "text" ] }, output_schema: { type: "object" },
+      requirements: { "vision" => true })
+
+    get new_application_task_definition_path(@application, from: original.id)
+
+    assert_response :success
+    assert_select "h1", "Publish structured generation version 3"
+    assert_select "input[name='task_definition[key]'][value='first.extract']"
+    assert_select "input[name='task_definition[version]'][value='3']"
+    assert_select ".docs-callout", text: /Based on first.extract@2/
+    assert_select "textarea[name='task_definition[instructions]']", text: "Extract carefully."
+
+    assert_difference "@application.task_definitions.count", 1 do
+      post application_task_definitions_path(@application), params: { task_definition: {
+        key: "first.extract", version: 3, executor: "structured_generation", instructions: "Extract better.",
+        input_schema: '{"type":"object","required":["text"]}', output_schema: '{"type":"object"}',
+        requirements: '{"vision":true}'
+      } }
+    end
+    assert_equal({ "vision" => true }, @application.task_definitions.find_by!(key: "first.extract", version: 3).requirements)
   end
 
   test "owner archives and restores a task definition" do

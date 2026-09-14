@@ -1,6 +1,15 @@
 require "test_helper"
 
 class WorkerTest < ActiveSupport::TestCase
+  test "records the configured model with worker presence" do
+    worker, = Worker.issue!(organization: organizations(:one), name: "Model worker")
+
+    worker.seen!(reported_id: "studio", version: "0.4", model_name: "qwen3.5-9b",
+      capabilities: %w[chat_completion])
+
+    assert_equal "qwen3.5-9b", worker.reload.reported_model
+  end
+
   setup do
     @organization = organizations(:one)
     @worker, = Worker.issue!(organization: @organization, name: "Home worker",

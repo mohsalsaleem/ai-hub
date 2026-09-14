@@ -78,7 +78,7 @@
         <div><span class="status-dot <%= participation_state.in?(%w[available busy]) ? 'is-online' : 'is-offline' %>"></span><h2><%= worker.name %></h2></div>
         <%= status_badge(participation_state) %>
       </div>
-      <div class="worker-meta"><span><%= worker.version || "Version unknown" %></span><span><%= number_with_delimiter(worker.jobs.count) %> runs served</span><span><%= worker.active_lease_count %> / <%= worker.max_concurrent_jobs %> active</span></div>
+      <div class="worker-meta"><span>Worker <%= worker.version || "version unknown" %></span><span>Model: <strong><%= worker.reported_model || "Not reported" %></strong></span><span><%= number_with_delimiter(worker.jobs.count) %> runs served</span><span><%= worker.active_lease_count %> / <%= worker.max_concurrent_jobs %> active</span></div>
       <div class="chip-row">
         <span class="chip"><%= worker.participation_mode.humanize %> capacity</span>
         <span class="chip"><%= worker_trust_label(worker.trust_tier) %></span>
