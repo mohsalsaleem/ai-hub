@@ -12,7 +12,9 @@ module AiHubWorker
 
     attr_reader :model_name
 
-    def initialize(config, transport: nil)
+    def initialize(config, transport: nil, chat_template_kwargs: {})
+      raise ArgumentError, "chat_template_kwargs must be an object" unless chat_template_kwargs.is_a?(Hash)
+      @chat_template_kwargs = chat_template_kwargs
       @base = URI(config.model_url.sub(%r{/+\z}, ""))
       @model = config.model
       @api_key = config.model_api_key
@@ -46,7 +48,7 @@ module AiHubWorker
       request = Net::HTTP::Post.new(uri)
       request["Authorization"] = "Bearer #{@api_key}"
       request["Content-Type"] = "application/json"
-      request.body = JSON.generate(
+      body = {
         model: @model,
         messages: [
           { role: "system", content: definition.fetch("instructions") },
@@ -56,7 +58,9 @@ module AiHubWorker
           name: definition.fetch("key").tr(".-", "_"), strict: true,
           schema: definition.fetch("output_schema")
         } }
-      )
+      }
+      body[:chat_template_kwargs] = @chat_template_kwargs unless @chat_template_kwargs.empty?
+      request.body = JSON.generate(body)
       response = @transport.call(request, uri)
       raise Error, "Model returned HTTP #{response.code}" unless response.code.to_i.between?(200, 299)
 
@@ -81,7 +85,9 @@ module AiHubWorker
       instructions << messages.shift.fetch("content") while messages.first&.fetch("role") == "system"
       instructions.reject!(&:empty?)
       messages.unshift({ "role" => "system", "content" => instructions.join("\n\n") }) if instructions.any?
-      request.body = JSON.generate({ model: @model, messages: }.merge(input.slice("temperature", "top_p", "max_tokens", "stop")))
+      body = { model: @model, messages: }.merge(input.slice("temperature", "top_p", "presence_penalty", "max_tokens", "stop", "response_format"))
+      body[:chat_template_kwargs] = @chat_template_kwargs unless @chat_template_kwargs.empty?
+      request.body = JSON.generate(body)
       response = @transport.call(request, uri)
       raise Error, "Model returned HTTP #{response.code}" unless response.code.to_i.between?(200, 299)
 

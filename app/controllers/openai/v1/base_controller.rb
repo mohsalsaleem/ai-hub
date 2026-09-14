@@ -85,7 +85,11 @@ module Openai
 
       def inference_options
         {}.tap do |options|
-          %i[temperature top_p max_tokens stop].each { |key| options[key] = params[key] if params.key?(key) }
+          %i[temperature top_p presence_penalty max_tokens stop].each { |key| options[key] = params[key] if params.key?(key) }
+          if params.key?(:response_format)
+            format = params[:response_format]
+            options[:response_format] = format.respond_to?(:to_unsafe_h) ? format.to_unsafe_h : format
+          end
           options[:max_tokens] ||= params[:max_completion_tokens] if params.key?(:max_completion_tokens)
           options[:max_tokens] ||= params[:max_output_tokens] if params.key?(:max_output_tokens)
         end

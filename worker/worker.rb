@@ -6,7 +6,8 @@ require_relative "lib/ai_hub_worker"
 config = AiHubWorker::Config.from_env
 runner = AiHubWorker::Runner.new(
   client: AiHubWorker::Client.new(config),
-  executor: AiHubWorker::Executor.new(config),
+  executor: AiHubWorker::Executor.new(config,
+    chat_template_kwargs: JSON.parse(ENV.fetch("AI_MODEL_CHAT_TEMPLATE_KWARGS", "{}"))),
   cache: AiHubWorker::DefinitionCache.new(File.join(config.state_path, "definitions")),
   outbox: AiHubWorker::ResultOutbox.new(File.join(config.state_path, "outbox.sqlite3")),
   poll_wait_seconds: config.poll_wait_seconds

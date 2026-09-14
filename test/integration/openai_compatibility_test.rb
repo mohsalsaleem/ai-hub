@@ -10,6 +10,39 @@ class OpenaiCompatibilityTest < ActionDispatch::IntegrationTest
 
   def headers = { "Authorization" => "Bearer #{@token}" }
 
+  test "preserves a strict response schema in the queued job" do
+    format = { type: "json_schema", json_schema: { name: "resume", strict: true,
+      schema: { type: "object", additionalProperties: false, required: [ "name" ],
+        properties: { name: { type: "string" } } } } }
+    post "/v1/responses", headers: headers, as: :json,
+      params: { model: @definition.reference, input: "Synthetic resume", background: true, response_format: format, presence_penalty: 1.5 }
+    assert_response :success
+    assert_equal format.deep_stringify_keys, @application.jobs.last.input.fetch("response_format")
+    assert_equal 1.5, @application.jobs.last.input.fetch("presence_penalty")
+  end
+
+  test "rejects invalid response formats instead of silently dropping them" do
+    assert_no_difference "Job.count" do
+      post "/v1/responses", headers: headers, as: :json,
+        params: { model: @definition.reference, input: "Synthetic", background: true,
+          response_format: { type: "unsupported" } }
+      assert_response :unprocessable_entity
+    end
+  end
+
+  test "chat completions expose prompt and completion usage fields" do
+    input = { "messages" => [ { "role" => "user", "content" => "Hello" } ] }
+    @application.jobs.create!(task_definition: @definition, idempotency_key: "completed-chat",
+      input: input, status: "completed", completed_at: Time.current,
+      output: { "content" => "{}", "finish_reason" => "stop",
+        "usage" => { "prompt_tokens" => 12, "completion_tokens" => 4, "total_tokens" => 16 } })
+    post "/v1/chat/completions", headers: headers.merge("Idempotency-Key" => "completed-chat"), as: :json,
+      params: { model: @definition.reference, messages: input.fetch("messages") }
+    assert_response :success
+    assert_equal({ "prompt_tokens" => 12, "completion_tokens" => 4, "total_tokens" => 16 },
+      response.parsed_body.fetch("usage"))
+  end
+
   test "lists chat task definitions as models" do
     @application.task_definitions.create!(key: "private.extract", version: 1, instructions: "Extract.",
       input_schema: { type: "object" }, output_schema: { type: "object" })
